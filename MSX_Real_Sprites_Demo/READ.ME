@@ -1,0 +1,38 @@
+ 		      MSX2 SM2 Sprites Engine Shader v3.0
+
+ - 64 16x16 Sprites, 16 colors with palette
+ - OR attributes per line
+ - Shift attributes per line
+ - PAT (Pattern Table, 64 entries total) Format per array element:
+  [0]   S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of  1th pattern string for sprites 0 and 1
+  [1]   S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of  2nd pattern string for sprites 0 and 1
+	. . . 
+ [15]   S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of 16th pattern string for sprites 0 and 1
+ [16]   S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S3 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 S2 - 32 bit of  1th pattern string for sprites 2 and 3
+	. . . etc.
+
+ - SCT (Color Table, 32 entries total) Format per array element:
+  [0]   S3 S3 S3 S3 S3 S3 S3 S3 S2 S2 S2 S2 S2 S2 S2 S2 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of  1th color code string for sprites 0, 1, 2, 3
+  [1]   S3 S3 S3 S3 S3 S3 S3 S3 S2 S2 S2 S2 S2 S2 S2 S2 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of  2nd color code string for sprites 0, 1, 2, 3
+ [15]   S3 S3 S3 S3 S3 S3 S3 S3 S2 S2 S2 S2 S2 S2 S2 S2 S1 S1 S1 S1 S1 S1 S1 S1 S0 S0 S0 S0 S0 S0 S0 S0 - 32 bit of 16th color code string for sprites 0, 1, 2, 3
+ [16]   S7 S7 S7 S7 S7 S7 S7 S7 S6 S6 S6 S6 S6 S6 S6 S6 S5 S5 S5 S5 S5 S5 S5 S5 S4 S4 S4 S4 S4 S4 S4 S4 - 32 bit of 16th color code string for sprites 4, 5, 6, 7
+	. . . etc.
+
+ - SAT (Attribute Table, 32 entries total) Format:
+  [0]   Y of Sprite 0 (32 bit)
+  [1]   X of Sprite 0 (32 bit)
+  [2]   (Pattern Num of Sprite 0)*4 (32 bit)
+  [3]   NC (32 bit)
+  [0]   Y of Sprite 1 (32 bit)
+  [1]   X of Sprite 1 (32 bit)
+  [2]   (Pattern Num of Sprite 1)*4 (32 bit)
+  [3]   NC (32 bit)
+	. . . etc.
+
+  Shader show all 64 at once, when MSX capable show only 32. Therefore last 32 Sprites use same SCT order, as first 32.
+  Shader use float coordinates system, for convinient using in programs outside MSX2.
+  Shader use SM2 mode format for patterns coding, only for sprites 16x16.
+  Shader not emulate MSX2 restrictions, like 8 sprites per line and interrupt bit.
+  Shader not emulate undoccumented MSX2 registers abilities.
+
+Requirements: Videocard with OpenGL GLSL 4.0 support
