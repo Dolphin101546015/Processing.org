@@ -95,7 +95,7 @@ void main( void ) {
 		if ( dx > 15 ) continue;                     				// Sprite in range by X
 		if ( (PAT[ sp_p + dy ] & uint( 1 << dx + sp_poffs ) ) > 0 ) {		// Test Sprite Pattern bit
 			res_color= (lastnum-i==1) ? res_color | color : color;		// do OR, else write last color
-			if ( (color &  64) > 0 ) lastnum = i;				// Store index for color summ
+			if ( (color &  64) > 0 ) lastnum = i;				// Store index for collor summ
 	}	}
 	if (res_color==0) discard;                                                      // if Index color == transparent, Exit
 	pal  = PAL[ res_color & 15 ];							//  Get palette by Index (64 colors range)
