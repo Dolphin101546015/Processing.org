@@ -9,7 +9,7 @@ Using let load sprite bank, saved from real MSX2 machine:
 And edit it with mouse in PC with Windows, Linux or Mac (GLSL support 4.0 needed)
 
 Functions:
-Program on the start enable two sprites edit mode (you draw in curent sprite patern and next one).
+Program on the start enable two sprites edit mode (you draw in curent sprite pattern and next one).
 Also you change color lines for both sprites, and have possibility to change OR bit for second sprite.
 But if you need edit sprites separately use keys:
 
@@ -27,3 +27,8 @@ for changing palette of sellected color;
 
 
  
+It is important to know:
+MSX2 able show only 32 sprites, and have only 32 entries for colorong in SCT.
+- My program show 64 sprites (full PAT Bank), but using SCT twice for both halfs.
+- Also program use OR operations on sprites only by pairs odd/even. When MSX2 let doing it for several sprites.
+You might use this ability in edit also, but without preview of result.
