@@ -1,0 +1,29 @@
+MSX2 Sprite Mode 2 Editor v1.0a
+
+Created with Processing, for show capability of using Sprite Shader Engine.
+Using let load sprite bank, saved from real MSX2 machine:
+- "PAT file": File with sprites patterns bank 2048 bytes (Basic header handled automaticaly)
+- "SCT file": File with sprites colors bank 512 bytes or with SAT also (Basic header handled automaticaly)
+- "PAL file": File with MSX2 palette 32 bytes (RB 0G ...)
+
+And edit it with mouse in PC with Windows, Linux or Mac (GLSL support 4.0 needed)
+
+Functions:
+Program on the start enable two sprites edit mode (you draw in curent sprite patern and next one).
+Also you change color lines for both sprites, and have possibility to change OR bit for second sprite.
+But if you need edit sprites separately use keys:
+
+- Left Mouse Button: Select sprite in bank, draw sprite bitmap in lens, and selecting colors 
+from bottom area and set in left bar on the lens and OR bit bar lines also;
+- Right Mouse Button: Using mostly to clear (as in lens for clear points in sptite bitmap,
+or clear OR bit for sprite lines). On bottom colors bar, RB show control 
+for changing palette of sellected color;
+- F1 key: When holded, deny edit right sprite pattern, and let edit only left sprite.
+- F2 key: Same but for right sprite edit;
+- F3 key: Preview overlap of all sprites by pairs in left sprites table for test color mixing;
+- F4 key: Enable or Disable Emboss filter;
+- F10 key: Quit program without saving data;
+- Esc key: Same with saving (original files will be backupped)
+
+
+ 
