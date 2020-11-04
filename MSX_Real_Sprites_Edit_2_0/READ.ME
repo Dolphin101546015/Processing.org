@@ -1,0 +1,52 @@
+MSX2 Sprite Mode 2 Editor v2.0 (final)
+
+Created with Processing, for show capability of using Sprite Shader Engine.
+Using let load sprite bank, saved from real MSX2 machine:
+- "PAT file": File with sprites patterns bank 2048 bytes (Basic header handled automaticaly)
+- "SCT file": File with sprites colors bank 512 bytes or with SAT also (Basic header handled automaticaly)
+- "PAL file": File with MSX2 palette 32 bytes (RB 0G ...)
+
+And edit it with mouse in PC with Windows, Linux or Mac (GLSL support 4.0 needed)
+
+New functions in this version:
+- Reworked Lens shader, for showing both sprite planes. Active plane showing with full alpha, 
+shadow plane is blended.
+- Applied roll/pan pattern function with mouse or cursor keys.
+- Applied flip pattern functions by vertical ([V]) or horizontal ([H]).
+- Applied clear pattern(patterns) function
+- Applied simple color calculator, show both sellected colors for each sprites and resulting color (OR)
+
+
+Functions:
+Program on the start enable two sprites edit mode (you draw in curent sprite pattern and next one).
+Also you change color lines for both sprites, and have possibility to change OR bit for second sprite.
+But if you need edit sprites separately use keys:
+
+- Left Mouse Button: Select sprite in bank, draw sprite bitmap in lens, and selecting colors 
+from bottom area and set in left bar on the lens and OR bit bar lines also;
+- Right Mouse Button: Using mostly to clear (as in lens for clear points in sptite bitmap,
+or clear OR bit for sprite lines). On bottom colors bar, RB show control 
+for changing palette of sellected color;
+- Middle Mouse Button: Drag Lens window
+- Same with [SHIFT], drag (roll/pan) sprite pattern
+- Same with only cursor keys, drag (roll/pan) sprite pattern, by 1 point
+
+for changing palette of sellected color;
+- [F1] key: When holded, deny edit right sprite pattern, and let edit only left sprite.
+- [F2] key: Same but for right sprite edit;
+- [F3] key: Switch sprites preview mode;
+- [F4] key: Switch Emboss filter;
+- [F5] key: Switch scale of sprites preview;
+- [H]  key: Horizontal pattern flip;
+- [V]  key: Vertical pattern flip;
+- [Del]key: Clear pattern (or both patterns);
+
+- [F10] key: Quit program without saving data;
+- [Esc] key: Same with saving (original files will be backupped)
+
+It is important to know:
+MSX2 able show only 32 sprites, and have only 32 entries for colorong in SCT.
+- My program show 64 sprites (full PAT Bank), but using SCT twice for both halfs.
+- Also program use OR operations on sprites only by pairs odd/even. When MSX2 let doing it for several sprites.
+You might use this ability in edit also, but without preview of result.
+- And last one inconvinience, only sprites 16x16 edit is possible.
