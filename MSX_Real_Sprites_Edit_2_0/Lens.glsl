@@ -139,14 +139,14 @@ void main( void ) {
 
 //	Draw Sellected Colors
 	if ((sellect&1)>0)
-		if (((fx >= (clr_l+0.3))&&(fx <= (clr_l+0.7)))&&((fy == 16.9)||(fy == 18.1))) {
+		if (((fx >= (clr_l+0.3))&&(fx <= (clr_l+0.7)))&&(fy == 16.9)) {
 			pal  |= PAL[ dx & 15 ];
 			gl_FragColor.rgb = mix(vec3((pal >> 16) & 255, (pal >> 8) & 255, pal & 255 ) / 255.0, vec3(0.5),0.5);
 			return;
 		}
 
 	if ((sellect&2)>0)
-		if (((fx >= (clr_r+0.3))&&(fx <= (clr_r+0.7)))&&((fy == 16.9)||(fy == 18.1))) {
+		if (((fx >= (clr_r+0.3))&&(fx <= (clr_r+0.7)))&&(fy == 18.1)) {
 			pal  |= PAL[ dx & 15 ];
 			gl_FragColor.rgb = mix(vec3((pal >> 16) & 255, (pal >> 8) & 255, pal & 255 ) / 255.0, vec3(0.5),0.5);
 			return;
