@@ -1077,7 +1077,7 @@ void draw() {
           if ((flicker)||(need_redraw)) {copy(Screen, 0, 0, 1920,1080, 0,0, width, height); }
 
           mouse_clr=get(mouseX,mouseY);
-          ShowFPS(width-400, height-45);
+          ShowFPS(width-width/10, height-height/48);
 }
 
 void ShowFPS(int xpos, int ypos) {
@@ -1086,10 +1086,10 @@ void ShowFPS(int xpos, int ypos) {
     if (fc>maxfc) maxfc=fc;
     tim=millis(); ofc=frameCount;
   }
-  stroke(0,100,150); fill(20,25,25); rect(xpos,ypos,400,45);
-  textSize(32); stroke(1); fill( 255, 255, 0);
+  stroke(0,100,150); fill(20,25,25); rect(xpos,ypos,width-xpos,height-ypos-1);
+  textSize(width/120); stroke(1); fill( 255, 255, 0);
   String fps=String.format( "%.2f", fc )+" fps ("+String.format( "%.2f", maxfc )+" max)";
-  text( fps, xpos+(130-fps.length())/2, ypos+40);
+  text( fps, width-fps.length()*(width/240), ypos+width/120+8);
 }
 
 void windowResized(){
