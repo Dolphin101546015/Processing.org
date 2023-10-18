@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
-//  MSX2 Images Converter v2.20 (by Dolphin_Soft #101546015)                                                                      //
+//  MSX2 Images Converter v2.30 (by Dolphin_Soft #101546015)                                                                      //
 //                                                                                                                                //
 //            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               //
 //                                                                                                                                //
@@ -16,7 +16,7 @@
 //                                                                                                                                //
 //  [F5 ] : Toogle Auto Aspect Rate ( On(*) / Off )                                                                               //
 //  [F6 ] : Select Interpolation Filter (Point, Linear(*), Bilinear, Trilinear)                                                   //
-//  [F8 ] : Preview mode with fast flicker for 256/2048(*) Output Images                                                          //
+//  [F8 ] : Preview mode with fast flicker for 256/2048(*) Output Images (3)                                                      //
 //  [F7 ] : Switch color mode (256/2048(*)/16M colors) in cycle (1)                                                               //
 //          With [SHIFT] - switch backward                                                                                        //
 //                                                                                                                                //
@@ -49,9 +49,11 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
 //  (*) - Default value                                                                                                           //
-//  (1) - 256 colors mode have coding output for Interlace, 2048 colors mode switch every output pixels between frames            //
-//  (2) - One Shader Filter from: Sharpen, Contrast, Gamma, Solaris, Saturat, Temper, Emboss, Dithering, Demoise, Noise           //
+//  (1) - 256 colors mode have coding output for Interlace, 2048 colors mode switch every output pixels between frames.           //
+//  (2) - One Shader Filter from: Sharpen, Contrast, Gamma, Solaris, Saturat, Temper, Emboss, Dithering, Denoise, Noise,          //
 //      For apply several filters, apply every needed sequentially by pressing [SHIFT]+([F9] or [F11]) on every sellected filter. //
+//  (3) - Saving in 16M mode, generate YJK files with extended ranges (more than 19k colors), for MSX2+ SCREEN12                  //
+//        All active shaders working also.                                                                                        //
 //                                                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -408,6 +410,7 @@ void setup() {
       size(1920,1080,P3D); // - windowed mode
       maximized();
       noSmooth();
+//      smooth(8);
 
         old_w = width; 
         old_h = height;
@@ -425,6 +428,7 @@ void setup() {
         filter[7] = new Filter("7. Dithering","dither.glsl", -2.0,    0.5, 2.0);
         filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.0,    0.5, 2.0);
         filter[9] = new Filter("9. Noise",    "noise.glsl",  -3.0,    0.3, 3.0);
+//        filter[10] = new Filter("10. Edge detect",    "edge.glsl",  -3.0,    0.3, 3.0);
 
         background(0);
         SetFont();
@@ -446,13 +450,15 @@ void setup() {
         interpolation(Screen,  2);
         interpolation(Interlaced,  filter_mode);
         interpolation(ImgShow,     filter_mode);
+        //interpolation(ImgPreview,  filter_mode);
         interpolation(Preview,     filter_mode);
         ScaleSrc();
 }
 
 void ScaleSrc() {
         Preview.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
-        if ((apply_shader)&&(color_mode_code!=3)){ 
+//        if ((apply_shader)&&(color_mode_code!=3)){ 
+        if (apply_shader){ 
             if (shaderNum!=8) Preview.filter(filter[shaderNum].shader);
             else {
                 ImgShow.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, (int)(dx), (int)(dy));
@@ -462,9 +468,13 @@ void ScaleSrc() {
             if (key_SPACE) Preview.filter(filter[shaderNum].shader);
         }
         ImgPreview.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY);
-        if (color_mode_code>5) {
+        if ((color_mode_code>5)||(color_mode_code==3)) {
+//            if (key_CTRL) {
                 Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY*2);
                 if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
+//            } else {
+//                Interlaced.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY*2);
+//            }
         }
         if (color_mode_code>3) convertSC57();
         if (color_mode_code<3) coder();
@@ -571,6 +581,123 @@ void Save_MSX(){
           }
 }
 
+void SaveYJK(){
+        OutputStream outp = createOutput(ImgOut+".sC0");
+        println("Saving: "+ImgOut+".sC0");
+        int y1,y2,y3,y4;
+        int r3,g3,b3;
+        int r4,g4,b4;
+        int j1,k1,j2,k2;
+        int offs;
+        try {
+              if (apply_Basic_header){
+                    outp.write(0xFE); 
+                    outp.write(0x00); outp.write(0x00); 
+                    outp.write(0x00); outp.write(0xD4); 
+                    outp.write(0x00); outp.write(0x00);
+              }
+              Interlaced.loadPixels();
+              for (j=0; j<fullY;j++) 
+                  for (i=0; i<64;i++) {
+                        offs=j*1024+i*4;
+                        b1 = Interlaced.pixels[offs];
+                        r1 = (b1>>16)&255; g1 = (b1>> 8)&255; b1&= 255;
+                        y1 = (((b1<<2)+(r1<<1)+g1)>>3);  //  Laurens Holst's corrected formula
+                        b2 = Interlaced.pixels[offs+1];
+                        r2 = (b2>>16)&255; g2 = (b2>> 8)&255; b2&= 255;
+                        y2 = (((b2<<2)+(r2<<1)+g2)>>3);
+                        b3 = Interlaced.pixels[offs+2];
+                        r3 = (b3>>16)&255; g3 = (b3>> 8)&255; b3&= 255;
+                        y3 = (((b3<<2)+(r3<<1)+g3)>>3);
+                        b4 = Interlaced.pixels[offs+3];
+                        r4 = (b4>>16)&255; g4 = (b4>> 8)&255; b4&= 255;
+                        y4 = (((b4<<2)+(r4<<1)+g4)>>3);
+
+                        r1+=r2+r3+r4; r1>>=2;
+                        g1+=g2+g3+g4; g1>>=2;
+                        b1+=b2+b3+b4; b1>>=2;
+                        j2=((y1+y2+y3+y4)>>2);
+                        j1 = (r1-j2); k1 = (g1-j2);
+
+                        y1&=248; y2&=248; y3&=248; y4&=248;
+
+                        j1>>=3; k1>>=3;
+                        y1|=k1&7; y2|=(k1>>3)&7;
+                        y3|=j1&7; y4|=(j1>>3)&7;
+
+                        outp.write(y1); outp.write(y2); outp.write(y3); outp.write(y4);
+                  }
+              outp.flush();
+              outp.close();
+        }
+        catch(Exception e) {
+              println("Message: " + e);
+        }
+      
+        outp = createOutput(ImgOut+".sC1");
+        println("Saving: "+ImgOut+".sC1");
+        try {
+              if (apply_Basic_header){
+                  outp.write(0xFE); 
+                  outp.write(0x00); outp.write(0x00); 
+                  outp.write(0x00); outp.write(0xD4); 
+                  outp.write(0x00); outp.write(0x00);
+              }
+              for (j=0; j<fullY;j++) 
+                  for (i=0; i<64;i++) {
+                        offs=j*1024+i*4+512;
+                        b1 = Interlaced.pixels[offs];
+                        r1 = (b1>>16)&255; g1 = (b1>> 8)&255; b1&= 255;
+                        y1 = (((b1<<2)+(r1<<1)+g1)>>3);   //  Laurens Holst's corrected formula
+                        b2 = Interlaced.pixels[offs+1];
+                        r2 = (b2>>16)&255; g2 = (b2>> 8)&255; b2&= 255;
+                        y2 = (((b2<<2)+(r2<<1)+g2)>>3); 
+                        b3 = Interlaced.pixels[offs+2];
+                        r3 = (b3>>16)&255; g3 = (b3>> 8)&255; b3&= 255;
+                        y3 = (((b3<<2)+(r3<<1)+g3)>>3);
+                        b4 = Interlaced.pixels[offs+3];
+                        r4 = (b4>>16)&255; g4 = (b4>> 8)&255; b4&= 255;
+                        y4 = (((b4<<2)+(r4<<1)+g4)>>3);
+
+                        r1+=r2+r3+r4; r1>>=2;
+                        g1+=g2+g3+g4; g1>>=2;
+                        b1+=b2+b3+b4; b1>>=2;
+                        j2=((y1+y2+y3+y4)>>2);
+                        j1 = (r1-j2); k1 = (g1-j2);
+  
+                        if ((y1&7)>0) y1+=8;
+                        if ((y2&7)>0) y2+=8;
+                        if ((y3&7)>0) y3+=8;
+                        if ((y4&7)>0) y4+=8;
+                        y1&=248; y2&=248; y3&=248; y4&=248;
+
+                        k2=j1&7; 
+                        if (k2>0) 
+                          if (j1<0) j1-=3; else j1+=3; 
+                        k2=k1&7; 
+                        if (k2>0) 
+                          if (k1<0) k1-=3; else k1+=3;
+                        
+                        k1>>=3; j1>>=3;
+                        y1|=k1&7; y2|=(k1>>3)&7;
+                        y3|=j1&7; y4|=(j1>>3)&7;
+
+                        outp.write(y1); outp.write(y2); outp.write(y3); outp.write(y4);
+                  }
+              outp.flush();
+              outp.close();
+          }
+          catch(Exception e) {
+              println("Message: " + e);
+          }
+          if (apply_Basic_header){
+            String code = "10 SCREEN 12,,,,,2;20 BLOAD"+(char)34+"img.sC0"+(char)34+",s:SET PAGE1,1;";
+            code+="30 BLOAD"+(char)34+"img.sC1"+(char)34+",s:COLOR=RESTORE;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+"img.bas"+(char)34+";";
+            String[] list = split(code, ';');
+            saveStrings(ImgOut+".bas",list);
+          }
+}
+
 void Render_Info(){
           Screen.beginDraw();
           Screen.blendMode(REPLACE );
@@ -579,7 +706,7 @@ void Render_Info(){
           Screen.textSize(15);
           if (color_mode_code==1) color_mode="332 bits (256x212 + 256x424 Screen 8)";
           if (color_mode_code==2) color_mode="443 bits (MSX2 2048 colors)";
-          if (color_mode_code==3) color_mode="True Color (16M colors)";
+          if (color_mode_code==3) color_mode="16M preview (MSX2+ YJK Output)";
           if (color_mode_code==4) color_mode="16 Colors (256x212 Screen 5)";
           if (color_mode_code==5) color_mode="16 Colors (512x212 Screen 7)";
           if (color_mode_code==6) color_mode="16 Colors (256x424 Screen 5)";
@@ -742,6 +869,7 @@ void draw() {
                       }
                       if ((key_RIGHT)||(key_RPLUS)) {
                           if (fullX<Img.width){
+  //                        if (dy!=Img.height){
                               if ((x+dx+st)>Img.width)              x -= st;
                               if (x<st)                             x  = 0;
                               if ((x+dx+st)<=Img.width)            dx += st;
@@ -762,17 +890,21 @@ void draw() {
                   }
        
                   if (key_SPACE) {
+//                      key_SPACE    = false;
                   }
       
                   if (key_F1) {
+//                    key_F1         = false;
                   }
 
                   if (key_F2) {
-                    if (color_mode_code>=4) save_SC57();
-                    else {
-                      apply_Basic_header = !key_SHIFT;
-                      Save_MSX();
-                    }
+                      if (color_mode_code==3) SaveYJK();
+                      else 
+                          if (color_mode_code>=4) save_SC57();
+                          else {
+                              apply_Basic_header = !key_SHIFT;
+                              Save_MSX();
+                          }
                       key_F2       = false;
                   }
       
@@ -800,6 +932,7 @@ void draw() {
                       interpolation(Preview,    filter_mode);
                       interpolation(Interlaced, filter_mode);
                       interpolation(ImgShow,    filter_mode);
+//                      interpolation(ImgPreview,  2);
                       key_F6       = false;
                   }
       
@@ -859,14 +992,12 @@ void draw() {
                         }
                         filter[shaderNum].shader.set("val", filter[shaderNum].val);
                       }
-                      if (color_mode_code==3) apply_shader = false;
                       key_F9       = false;
                   }
     
                   if (key_F10 ){
                       apply_shader^= true;
                       if (apply_shader) filter[shaderNum].shader.set("val", filter[shaderNum].val);
-                      if (color_mode_code==3) apply_shader = false;
                       key_F10      = false;
                   }
     
@@ -888,7 +1019,6 @@ void draw() {
                            }
                            filter[shaderNum].shader.set("val", filter[shaderNum].val);
                       }
-                      if (color_mode_code==3) apply_shader = false;
                       key_F11       = false;
                   }
                 
@@ -907,7 +1037,7 @@ void draw() {
               Screen.beginDraw();
               Screen.copy(Lens, 0, 0, Lens.width, Lens.height, 1899-Lens.width, 20, Lens.width, Lens.height);
               i=848; 
-              if ((color_mode_code>1)&&(color_mode_code<6)){
+              if ((color_mode_code>1)&&(color_mode_code<6)&&(color_mode_code!=3)){
                   if (fullY==256) i=955;
                   Screen.copy(ImgPreview, 0, 0, fullX, fullY, 20, 20, 1024, i);
               }
@@ -926,6 +1056,7 @@ void draw() {
               }
 
               if (color_mode_code>3) {    // Draw Palette bar
+                  //Screen.stroke(255,215,255, 0);
                   Screen.noStroke();
                   for (i=0; i<16; i++){ 
                         Screen.fill( (cv[i]>>16)&255, (cv[i]>>8)&255, cv[i]&255, 128);
@@ -993,6 +1124,7 @@ void keyPressed() {
   if ( keyCode == 141   )    key_RMULT = true;
   if ( keyCode == 147   )    key_DEL   = true;
   if ( keyCode == 11    )    key_PGDOWN= true;
+ //  println(keyCode);
 }
 
 
