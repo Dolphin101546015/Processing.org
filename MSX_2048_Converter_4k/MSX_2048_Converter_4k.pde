@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
-//  MSX2 Images Converter v2.30 (by Dolphin_Soft #101546015)                                                                      //
+//  MSX2 Images Converter v2.50 (by Dolphin_Soft #101546015)                                                                      //
 //                                                                                                                                //
 //            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               //
 //                                                                                                                                //
@@ -10,7 +10,8 @@
 // Download Processing : https://processing.org/download                                                                          //
 // Run and Open PDE file inside, then press CTRL + R                                                                              //
 //                                                                                                                                //
-//  [F2] : Save current mode image in MSX2 Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)              //
+//  [F1] : Enable Tile Generator (Allowed from SCREEN5 256x212): Switch Tiles Grid and Analyser + Rebuilder for Tile Tables       //
+//  [F2] : Save current mode image in MSX2/2+ Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)           //
 //  [F3] : Open File Dialog                                                                                                       //
 //  [F4] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)      //
 //                                                                                                                                //
@@ -58,13 +59,17 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 String      ImgOut="Z:\\basic\\img";
+//String      SourceImage="sp16_colored.png";
 String      SourceImage="yenn.png";
 
-long[] cv   = new long[512];
-long[] ci   = new long[512];
+int[] cv    = new int[512];
+int[] ci    = new int[512];
+byte[] tnt  = new byte[32*32];
+byte[] tct  = new byte[32*32*8];
+byte[] tpt  = new byte[32*32*8];
 int         ps;
 int         num=0; 
-long        tmp=0;
+int         tmp=0;
 
 
 float       ScaleY = 0.9;
@@ -109,6 +114,8 @@ boolean     apply_shader         = false;
 boolean     image_sellected      = false; 
 boolean     flicker              = false; 
 boolean     doNotRescale         = false; 
+boolean     GridEnabled          = false; 
+boolean     TilesReady           = false; 
             
 boolean     key_LEFT  = false, key_RIGHT = false, key_UP      = false, key_DOWN   = false;
 boolean     key_F1    = false, key_F2    = false, key_F3      = false, key_F4     = false;
@@ -154,8 +161,8 @@ void buildRange() {
         boolean fnd=false;
 // Palette indexing
         PImage Img57;
-        if (color_mode_code<6) { Img57=ImgPreview; curY=212;}
-        else { Img57=Interlaced; curY=424;}
+        if (color_mode_code<6) { Img57=ImgPreview; curY=fullY;}//212;}
+        else { Img57=Interlaced; curY=fullY*2;}//424;}
         for (t=0; t<=255; t++) cv[t]=255;
         Img57.loadPixels();
         for (j=0; j < curY*512; j++) Img57.pixels[j]&=0x00E0E0E0;
@@ -175,7 +182,7 @@ void buildRange() {
             }
 // Sorting
         for (t=0; t<ps; t++){
-           long max=0;
+           int max=0;
            for (i=t; i<ps; i++) 
                if (ci[i]>max) { max=ci[i]; num=i; }
            if (max>ci[t]) { 
@@ -190,7 +197,7 @@ void get16colors() {
         if (ps<16) 
           for (t=ps; t<16; t++) cv[t]=0;
         for (t=15; t>0; t--){
-           long max=cv[t];
+           int max=cv[t];
            for (i=t-1; i>=0; i--) 
                if (cv[i]>max) { max=cv[i]; num=i; }
            if (max>cv[t]) { 
@@ -203,9 +210,9 @@ void convertSC57(){
 int tcol=0;
 int t=0, i=0, curY=0;
 PImage Img57;
-        if (color_mode_code<6) { Img57=ImgPreview; curY=212;}
+        if (color_mode_code<6) { Img57=ImgPreview; curY=fullY;}//212;}
         else { 
-            Img57=Interlaced; curY=424;
+            Img57=Interlaced; curY=fullY*2;//424;
             Interlaced.beginDraw();
           }
         buildRange();
@@ -218,7 +225,7 @@ PImage Img57;
                     tmp=15;
                     for (t=0; t<15; t++) 
                         if (cv[t]>=tcol) break;
-                    Img57.pixels[i+j*512]=(int)cv[t];
+                    Img57.pixels[i+j*512]=cv[t];
             }
         Img57.updatePixels();
         if (color_mode_code>5) Interlaced.endDraw();
@@ -261,7 +268,7 @@ void save_SC57() {
                         tmp=15;
                         for (t=0; t<16; t++) 
                             if (cv[t]>=tcol) { tmp=t; break; }
-                        Img57.pixels[offs]=(int)cv[(int)tmp];
+                        Img57.pixels[offs]=cv[tmp];
                         if ((i&1)==0) tmp<<=4;
                         col|=tmp;
                         if ((i&1)==1) {outp.write(col&0xFF);col=0;}
@@ -275,8 +282,8 @@ void save_SC57() {
                     for (i=0; i < t; i++) outp.write(0);
     // Write Palette
                     for (i=0; i < 16; i++) {
-                      outp.write(((int)(cv[i]>>17)&0x70)|((int)(cv[i]>>5)&7));
-                      outp.write((int)(cv[i]>>13)&7);
+                      outp.write(((cv[i]>>17)&0x70)|((cv[i]>>5)&7));
+                      outp.write((cv[i]>>13)&7);
                     }
                     for (i=0; i < 32-ps*2; i++) outp.write(0);
                 }
@@ -292,8 +299,8 @@ void save_SC57() {
             OutputStream outp = createOutput(OutFile);
             try {
                   for (i=0; i < 16; i++) {
-                      outp.write(((int)(cv[i]>>17)&0x70)|((int)(cv[i]>>5)&7));
-                      outp.write((int)(cv[i]>>13)&7);
+                      outp.write(((cv[i]>>17)&0x70)|((cv[i]>>5)&7));
+                      outp.write((cv[i]>>13)&7);
                   }
                   for (i=0; i < 32-ps*2; i++) outp.write(0);
                   outp.flush();
@@ -316,6 +323,160 @@ void save_SC57() {
         }
                 
 }
+
+void GetTile(int num){
+  int t=0, i=0, j=0;
+  int c1=0, c2=0;
+  int tcol=0;
+  int pt=0;
+  int max=0,maxn=0;
+// Fill Name Table
+        tnt[num] = (byte)((num+128) & 255);
+        ImgPreview.loadPixels();
+        println();
+        for (t=(num>>5)*8; t <(num>>5)*8+8; t++){
+            for (j=0; j<16; j++) ci[j]=0;
+//Scan tile line and optimize colors               
+            for (i=(num&31)*8; i <(num&31)*8+8; i++){
+               tcol=ImgPreview.pixels[i+t*512];
+               for (j=0; j<16; j++) {
+                 if (tcol==cv[j]) ci[j]++;
+                 if (tcol==0) break;
+               }
+            }
+            maxn=0; max=0; 
+            for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
+            c1=maxn; ci[maxn]=0;
+            maxn=0; max=0; 
+            for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
+            c2=maxn; ci[maxn]=0;
+
+            for (i=(num&31)*8; i <(num&31)*8+8; i++){
+               tcol=ImgPreview.pixels[i+t*512];
+               if ((tcol!=cv[c1])&&(tcol!=cv[c2])) ImgPreview.pixels[i+t*512]=cv[c2]; 
+            }
+            pt=0;
+            for (i=(num&31)*8; i <(num&31)*8+8; i++){
+               tcol=ImgPreview.pixels[i+t*512];
+               if (tcol!=cv[c1]) {pt<<=1; pt++;} else pt<<=1;
+            }
+ // Fill Pattern Table
+            tpt[(int)((num>>5)*256+(num&31)*8+(t&7))]=(byte)pt;
+ // Fill Color Table
+            tct[(int)((num>>5)*256+(num&31)*8+(t&7))]=(byte)((c2<<4)|c1);
+        }
+        ImgPreview.updatePixels();
+}
+
+void GetTiles(){
+int maxY=0;
+        if (fullY==212) maxY=28; else maxY=32;
+        for (j=0; j < 32*maxY; j++) GetTile(j);
+}                  
+
+void ShowGrid(){
+        ImgPreview.loadPixels();
+        for (j=0; j < 256; j+=8)
+          for (i=0; i < 256; i++) {
+            ImgPreview.pixels[i+j*512]^=0x101010;
+            ImgPreview.pixels[j+i*512]^=0x101010;
+          }
+        ImgPreview.updatePixels();
+}
+
+void SaveTiles(){
+        String code = "";
+        String OutFile;
+// Name Table
+            OutFile=ImgOut+".s4n";
+            println("Saving: "+OutFile);
+            OutputStream outp = createOutput(OutFile);
+            try {
+                if (!key_SHIFT) {
+                    outp.write(0xFE); 
+                    outp.write(0x00); outp.write(0x00); 
+                    outp.write(0x00); outp.write(0x04); 
+                    outp.write(0x00); outp.write(0x00);
+                }
+                for (i=0;i<32*32;i++)
+                  outp.write(tnt[i]); 
+                outp.flush();
+                outp.close();
+            }
+            catch(Exception e) {
+                  println("Message: " + e);
+            }
+
+// Pattern Table
+            OutFile=ImgOut+".s4p";
+            println("Saving: "+OutFile);
+            outp = createOutput(OutFile);
+            try {
+                if (!key_SHIFT) {
+                    outp.write(0xFE); 
+                    outp.write(0x00); outp.write(0x00); 
+                    outp.write(0x00); outp.write(0x20); 
+                    outp.write(0x00); outp.write(0x00);
+                }
+                for (i=0;i<32*32*8;i++)
+                  outp.write(tpt[i]); 
+                outp.flush();
+                outp.close();
+            }
+            catch(Exception e) {
+                  println("Message: " + e);
+            }
+
+// Color Table
+            OutFile=ImgOut+".s4c";
+            println("Saving: "+OutFile);
+            outp = createOutput(OutFile);
+            try {
+                if (!key_SHIFT) {
+                    outp.write(0xFE); 
+                    outp.write(0x00); outp.write(0x00); 
+                    outp.write(0x00); outp.write(0x20); 
+                    outp.write(0x00); outp.write(0x00);
+                }
+                for (i=0;i<32*32*8;i++)
+                  outp.write(tct[i]); 
+                outp.flush();
+                outp.close();
+            }
+            catch(Exception e) {
+                  println("Message: " + e);
+            }
+
+// Palette
+            OutFile=ImgOut+".pal";
+            outp = createOutput(OutFile);
+            try {
+                if (!key_SHIFT) {
+                    outp.write(0xFE); 
+                    outp.write(0x80); outp.write(0x1B); 
+                    outp.write(0x20); outp.write(0x00); 
+                    outp.write(0x00); outp.write(0x00);
+                }
+                for (i=0; i < 16; i++) {
+                      outp.write(((cv[i]>>17)&0x70)|((cv[i]>>5)&7));
+                      outp.write((cv[i]>>13)&7);
+                }
+                outp.flush();
+                outp.close();
+            }
+            catch(Exception e) {
+                  println("Message: " + e);
+            }
+            if (apply_Basic_header){
+                code = "10 SCREEN4:VDP(10)=VDP(10)OR128:VDP(2)=7:VDP(9)=VDP(9)OR2;";
+                code+="20 BLOAD"+(char)34+"img.s4p"+(char)34+",S:BLOAD"+(char)34+"img.s4n"+(char)34+",S,&H4000;";
+                code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S:COLOR=RESTORE;";
+                code+="40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;";
+                String[] list = split(code, ';');
+                saveStrings(ImgOut+".bas",list);
+            }
+}
+ 
  
 void fileSelected(File selection) {
         if (selection == null) {
@@ -330,11 +491,11 @@ void fileSelected(File selection) {
 void SetFont() {
         Screen=createGraphics(1920, 1080, P3D);
         font = createFont( "Segoe UI", 300, true );
-        Preview=createGraphics(512, 424, P3D);
-        ImgPreview=createImage(512, 424, RGB);;
+        Preview=createGraphics(512, 512, P3D);
+        ImgPreview=createImage(512, 512, RGB);;
         P0=createImage(256, 256, RGB);
         P1=createImage(256, 256, RGB);
-        Interlaced=createGraphics(512, 424, P3D);
+        Interlaced=createGraphics(512, 512, P3D);
         textFont( font );
         textAlign( LEFT );
 }
@@ -362,7 +523,7 @@ void Open_Image() {
 
         if (Img.width<=Img.height) {
               x  = 0;
-              y -=(Img.width-dx)/2;
+//              y -=(Img.width-dx)/2;
               dx = Img.width;
               dy = dx / (256.0/fullY);
               if (y<0) y=0;
@@ -371,7 +532,7 @@ void Open_Image() {
               ly  = 800;
         } else {
               y  = 0;
-              x -=(Img.height-dy)/2;
+//              x -=(Img.height-dy)/2;
               dy = Img.height;
               dx = dy / (fullY/256.0);
               if (x<0) x=0;
@@ -424,11 +585,10 @@ void setup() {
         filter[3] = new Filter("3. Saturat" , "satura.glsl", -3.0,    1.0, 3.0);
         filter[4] = new Filter("4. Solaris" ,  "solar.glsl", -2.0,    0.0, 2.0);
         filter[5] = new Filter("5. Temper"  , "temper.glsl",  0.1539, 1.0, 4.0);
-        filter[6] = new Filter("6. Emboss"  , "embos3.glsl", -3.0,    0.0, 3.0);
+        filter[6] = new Filter("6. Emboss"  , "emboss.glsl", -2.0,    0.0, 2.0);
         filter[7] = new Filter("7. Dithering","dither.glsl", -2.0,    0.5, 2.0);
-        filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.0,    0.5, 2.0);
-        filter[9] = new Filter("9. Noise",    "noise.glsl",  -3.0,    0.3, 3.0);
-//        filter[10] = new Filter("10. Edge detect",    "edge.glsl",  -3.0,    0.3, 3.0);
+        filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.001,  0.3, 2.0);
+        filter[9] = new Filter("9. Noise",    "noise.glsl",  -1.0,    0.3, 1.0);
 
         background(0);
         SetFont();
@@ -450,7 +610,6 @@ void setup() {
         interpolation(Screen,  2);
         interpolation(Interlaced,  filter_mode);
         interpolation(ImgShow,     filter_mode);
-        //interpolation(ImgPreview,  filter_mode);
         interpolation(Preview,     filter_mode);
         ScaleSrc();
 }
@@ -469,12 +628,8 @@ void ScaleSrc() {
         }
         ImgPreview.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY);
         if ((color_mode_code>5)||(color_mode_code==3)) {
-//            if (key_CTRL) {
                 Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY*2);
                 if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
-//            } else {
-//                Interlaced.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY*2);
-//            }
         }
         if (color_mode_code>3) convertSC57();
         if (color_mode_code<3) coder();
@@ -691,8 +846,8 @@ void SaveYJK(){
               println("Message: " + e);
           }
           if (apply_Basic_header){
-            String code = "10 SCREEN 12,,,,,2;20 BLOAD"+(char)34+"img.sC0"+(char)34+",s:SET PAGE1,1;";
-            code+="30 BLOAD"+(char)34+"img.sC1"+(char)34+",s:COLOR=RESTORE;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+"img.bas"+(char)34+";";
+            String code = "10 SCREEN 12,,,,,2;20 BLOAD"+(char)34+"img.sC0"+(char)34+",s:SET PAGE1,1:CLS;";
+            code+="30 BLOAD"+(char)34+"img.sC1"+(char)34+",s;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+"img.bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
           }
@@ -707,7 +862,9 @@ void Render_Info(){
           if (color_mode_code==1) color_mode="332 bits (256x212 + 256x424 Screen 8)";
           if (color_mode_code==2) color_mode="443 bits (MSX2 2048 colors)";
           if (color_mode_code==3) color_mode="16M preview (MSX2+ YJK Output)";
-          if (color_mode_code==4) color_mode="16 Colors (256x212 Screen 5)";
+          if (color_mode_code==4) 
+              if (!GridEnabled) color_mode="16 Colors (256x"+fullY+" Screen 5)";
+              else              color_mode="16 Colors (256x"+fullY+" Screen 2/4)";
           if (color_mode_code==5) color_mode="16 Colors (512x212 Screen 7)";
           if (color_mode_code==6) color_mode="16 Colors (256x424 Screen 5)";
           if (color_mode_code==7) color_mode="16 Colors (512x424 Screen 7)";
@@ -756,19 +913,19 @@ void Render_Info(){
           Screen.text(dy/fullY,           420, 1075);
 
           Screen.fill( 0, 255, 170, 255);
-          Screen.text("MSX",                        566, 1015);
+          Screen.text("MSX  PC",                    486, 1015); //566
           Screen.fill( 255, 150, 150);
-          Screen.text("R:",                         510, 1035);
-          Screen.text(hex((mouse_clr>>16)&255,2),   534, 1035);
-          Screen.text(binary((mouse_clr>>20)&15,4), 564, 1035);
+          Screen.text(":  R",                       542, 1035);
+          Screen.text(hex((mouse_clr>>16)&255,2),   520, 1035);
+          Screen.text(binary((mouse_clr>>20)&15,4), 482, 1035);
           Screen.fill( 150, 255, 150);
-          Screen.text("G:",                         510, 1055);
-          Screen.text(hex((mouse_clr>>8 )&255,2),   534, 1055);
-          Screen.text(binary((mouse_clr>>12)&15,4), 564, 1055);
+          Screen.text(":  G",                       542, 1055);
+          Screen.text(hex((mouse_clr>>8 )&255,2),   520, 1055);
+          Screen.text(binary((mouse_clr>>12)&15,4), 482, 1055);
           Screen.fill( 150, 150, 255);
-          Screen.text("B:",                         510, 1075);
-          Screen.text(hex((mouse_clr    )&255,2),   534, 1075);
-          Screen.text(binary((mouse_clr>> 5)&7,3),  572, 1075);
+          Screen.text(":  B",                       542, 1075);
+          Screen.text(hex((mouse_clr    )&255,2),   520, 1075);
+          Screen.text(binary((mouse_clr>> 5)&7,3),  490, 1075);
 
           Screen.endDraw();
 }
@@ -783,6 +940,10 @@ void draw() {
                   key_F8       = false;
               }
           
+                  if (key_PGDOWN) {
+                    key_PGDOWN=false;
+                  }
+
               if (!flicker) {
                   need_redraw = false;
     
@@ -794,7 +955,7 @@ void draw() {
                   if (key_F4) {
                       if (fullY==256) { fullY=212; }
                       else  { fullY=256; }
-                      if ((color_mode_code==1)||(color_mode_code>3)) { fullY=212; }
+                      if ((color_mode_code==1)||(color_mode_code>4)) { fullY=212; }
                       key_F4      = false;
                   }
     
@@ -869,7 +1030,6 @@ void draw() {
                       }
                       if ((key_RIGHT)||(key_RPLUS)) {
                           if (fullX<Img.width){
-  //                        if (dy!=Img.height){
                               if ((x+dx+st)>Img.width)              x -= st;
                               if (x<st)                             x  = 0;
                               if ((x+dx+st)<=Img.width)            dx += st;
@@ -893,18 +1053,19 @@ void draw() {
 //                      key_SPACE    = false;
                   }
       
-                  if (key_F1) {
-//                    key_F1         = false;
-                  }
-
                   if (key_F2) {
-                      if (color_mode_code==3) SaveYJK();
-                      else 
-                          if (color_mode_code>=4) save_SC57();
-                          else {
-                              apply_Basic_header = !key_SHIFT;
-                              Save_MSX();
-                          }
+                      if (GridEnabled) {
+                          ScaleSrc();
+                          GetTiles();
+                          SaveTiles();
+                      } else
+                        if (color_mode_code==3) SaveYJK();
+                        else 
+                            if (color_mode_code>=4) save_SC57();
+                            else {
+                                apply_Basic_header = !key_SHIFT;
+                                Save_MSX();
+                            }
                       key_F2       = false;
                   }
       
@@ -932,11 +1093,11 @@ void draw() {
                       interpolation(Preview,    filter_mode);
                       interpolation(Interlaced, filter_mode);
                       interpolation(ImgShow,    filter_mode);
-//                      interpolation(ImgPreview,  2);
                       key_F6       = false;
                   }
       
                   if (key_F7) {
+                      GridEnabled=false;
                       fullX=256;
                       if (key_SHIFT) {
                           color_mode_code--;
@@ -947,7 +1108,7 @@ void draw() {
                       }
                       if ( color_mode_code< 3) coder_mode=color_mode_code-1;
                       if ((color_mode_code==5)||(color_mode_code==7)) fullX=512;
-                      if ((color_mode_code==1)||(color_mode_code==6)||(color_mode_code==7)) fullY=212;
+                      if ((color_mode_code==1)||(color_mode_code==5)||(color_mode_code==6)||(color_mode_code==7)) fullY=212;
                       key_F7       = false;
                       println();
                       println("Mode : "+color_mode_code);
@@ -973,9 +1134,6 @@ void draw() {
                       filter[shaderNum].shader.set("val",filter[shaderNum].val);
                   }
 
-                  if (key_PGDOWN) {
-                    key_PGDOWN=false;
-                  }
                   if (key_F9 ){
                       if (key_SHIFT) { 
                            Lens.copy(   Img, 0, 0, Img.width, Img.height, 0, 0, lx,        ly);
@@ -1030,10 +1188,23 @@ void draw() {
                   }
       
                   ScaleSrc();
+
+                  if (GridEnabled) {
+                      GetTiles();
+                      ShowGrid();
+                  }
+
                   Render_Info();
+
               }
               if (key_SHIFT) apply_Basic_header=false; else apply_Basic_header=true;
               
+                  if (key_F1) {
+                      if (color_mode_code==4) GridEnabled   ^= true; 
+//                      TilesReady     = false; 
+                      key_F1         = false;
+                  }
+
               Screen.beginDraw();
               Screen.copy(Lens, 0, 0, Lens.width, Lens.height, 1899-Lens.width, 20, Lens.width, Lens.height);
               i=848; 
@@ -1042,7 +1213,8 @@ void draw() {
                   Screen.copy(ImgPreview, 0, 0, fullX, fullY, 20, 20, 1024, i);
               }
               else {
-                  Screen.copy(Interlaced, 0, 0, fullX, 424, 20, 20, 1024, 848);
+                  if (fullY==256) i=955;
+                  Screen.copy(Interlaced, 0, 0, fullX, fullY*2, 20, 20, 1024, i);
               }
                
               Screen.blendMode(BLEND);
@@ -1058,9 +1230,9 @@ void draw() {
               if (color_mode_code>3) {    // Draw Palette bar
                   //Screen.stroke(255,215,255, 0);
                   Screen.noStroke();
-                  for (i=0; i<16; i++){ 
-                        Screen.fill( (cv[i]>>16)&255, (cv[i]>>8)&255, cv[i]&255, 128);
-                        Screen.rect(549+i*31, 875, 30, 30);
+                  for (int t=0; t<16; t++){ 
+                        Screen.fill( (cv[t]>>16)&255, (cv[t]>>8)&255, cv[t]&255, 128);
+                        Screen.rect(549+t*31, i+28, 30, 30);
                   }
               }
               Screen.endDraw();

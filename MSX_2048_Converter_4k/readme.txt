@@ -1,18 +1,10 @@
-//                                                                                                                                
-//  MSX2 Images Converter v2.30 (by Dolphin_Soft #101546015)                                                                      
-//                                                                                                                                
-//            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               
-//                                                                                                                                
-//                                                        Vladivostok 2023                                                        
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ATTENTION! This program have fast flicker function is potentially dangerous for people suffering from epilepsy!
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+MSX2 Images Converter v2.50 (by Dolphin_Soft #101546015)
 
 Download Processing : https://processing.org/download
 Run and Open PDE file inside, then press CTRL + R
 
+[F1 ] : Enable Tile Generator (Allowed from SCREEN5 256x212): Switch Tiles Grid and Analyser + Rebuilder for Tile Tables
 [F2 ] : Save current mode image in MSX2 Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)
 [F3 ] : Open File Dialog
 [F4 ] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)
