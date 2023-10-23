@@ -1,10 +1,15 @@
-
-MSX2 Images Converter v2.50 (by Dolphin_Soft #101546015)
+//
+//  MSX2 Images Converter v3.00 (by Dolphin_Soft #101546015)
+//                                                           
+//  (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)
+//                                                         
+//                      Vladivostok 2023
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Download Processing : https://processing.org/download
 Run and Open PDE file inside, then press CTRL + R
 
-[F1 ] : Enable Tile Generator (Allowed from SCREEN5 256x212): Switch Tiles Grid and Analyser + Rebuilder for Tile Tables
+[F1] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables
 [F2 ] : Save current mode image in MSX2 Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)
 [F3 ] : Open File Dialog
 [F4 ] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)
@@ -20,7 +25,9 @@ Run and Open PDE file inside, then press CTRL + R
 [F11] : Switch forward  Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)
 [F12] : Reload source image (without reseting sellected options)
 
-	  [ARROWS] : Slow Move output area in Lens window
+    [TAB]    : Switch Palette (Dynamic(*) / Custom Fixed)
+    [SPACE]  : Try automaticaly find frame size on black background
+    [ARROWS] : Slow Move output area in Lens window
 [SHIFT] + [ARROWS] : Fast Move output area in Lens window
 
 	  [CTRL] + [ARROWS] : Slow Resize output area in Lens window

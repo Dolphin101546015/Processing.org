@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
-//  MSX2 Images Converter v2.50 (by Dolphin_Soft #101546015)                                                                      //
+//  MSX2 Images Converter v3.00 (by Dolphin_Soft #101546015)                                                                      //
 //                                                                                                                                //
 //            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               //
 //                                                                                                                                //
@@ -10,7 +10,7 @@
 // Download Processing : https://processing.org/download                                                                          //
 // Run and Open PDE file inside, then press CTRL + R                                                                              //
 //                                                                                                                                //
-//  [F1] : Enable Tile Generator (Allowed from SCREEN5 256x212): Switch Tiles Grid and Analyser + Rebuilder for Tile Tables       //
+//  [F1] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables    //
 //  [F2] : Save current mode image in MSX2/2+ Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)           //
 //  [F3] : Open File Dialog                                                                                                       //
 //  [F4] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)      //
@@ -26,6 +26,7 @@
 //  [F11] : Switch forward  Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)                      //
 //  [F12] : Reload source image (without reseting sellected options)                                                              //
 //                                                                                                                                //
+//  [SPACE]  : Try automaticaly find frame size on black background                                                               //
 //  [ARROWS] : Slow Move output area in Lens window                                                                               //
 //  [SHIFT] + [ARROWS] : Fast Move output area in Lens window                                                                     //
 //                                                                                                                                //
@@ -59,11 +60,22 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 String      ImgOut="Z:\\basic\\img";
-//String      SourceImage="sp16_colored.png";
 String      SourceImage="yenn.png";
+
+
+//                          Custom Palette (16 colors 0xRRGGBB)
+static int customPAL[][]={{0x000000,0x000000,0x20C020,0x60E060,0x2020E0,0x4060E0,0xA02020,0x40C0E0,    //  Custom MSX Palette
+                           0xE02020,0xE06060,0xC0C020,0xC0C080,0x208020,0xC040A0,0xA0A0A0,0xE0E0E0},
+                          {0x000000,0x000000,0x60C060,0xA0E0A0,0x4040E0,0x6080E0,0xA04040,0x60C0E0,    //  Custom User Palette
+                           0xE04040,0xE08080,0xC0C040,0xC0C0A0,0x40A040,0xC040A0,0xA0A0A0,0xE0E0E0}};
+int customPAL_num=0;                           
+
+PShader     cut_colors;
+PShader     repaint;
 
 int[] cv    = new int[512];
 int[] ci    = new int[512];
+int[] co    = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 byte[] tnt  = new byte[32*32];
 byte[] tct  = new byte[32*32*8];
 byte[] tpt  = new byte[32*32*8];
@@ -116,6 +128,7 @@ boolean     flicker              = false;
 boolean     doNotRescale         = false; 
 boolean     GridEnabled          = false; 
 boolean     TilesReady           = false; 
+boolean     CustomPal            = false; 
             
 boolean     key_LEFT  = false, key_RIGHT = false, key_UP      = false, key_DOWN   = false;
 boolean     key_F1    = false, key_F2    = false, key_F3      = false, key_F4     = false;
@@ -123,7 +136,7 @@ boolean     key_F5    = false, key_F6    = false, key_F7      = false, key_F8   
 boolean     key_F9    = false, key_F10   = false, key_F11     = false, key_F12    = false;
 boolean     key_SPACE = false, key_SHIFT = false, key_CTRL    = false, key_RMULT  = false;
 boolean     key_PLUS  = false, key_MINUS = false, key_RPLUS   = false, key_RMINUS = false; 
-boolean     key_DEL   = false, key_PGDOWN= false;
+boolean     key_DEL   = false, key_PGDOWN= false, key_TAB     = false;
 
 // FPS Counter Data
 int         tim   = 0;
@@ -156,20 +169,17 @@ class    Filter {
 
 void buildRange() {
         int tcol=0;
-        int t=0, i=0, curY;
+        int t=0, i=0, curY=fullY;
         ps=0;
         boolean fnd=false;
 // Palette indexing
-        PImage Img57;
-        if (color_mode_code<6) { Img57=ImgPreview; curY=fullY;}//212;}
-        else { Img57=Interlaced; curY=fullY*2;}//424;}
-        for (t=0; t<=255; t++) cv[t]=255;
-        Img57.loadPixels();
-        for (j=0; j < curY*512; j++) Img57.pixels[j]&=0x00E0E0E0;
-        Img57.updatePixels();
+        if (color_mode_code>5) curY<<=1;
+        for (t=0; t<16; t++) cv[t]=0;
+        Interlaced.filter(cut_colors);
+        Interlaced.loadPixels();
         for (j=0; j < curY; j++)
             for (i=0; i < fullX; i++) {
-              tcol=Img57.pixels[i+j*512];
+              tcol=Interlaced.pixels[i+j*512];
               for (t=0; t<=ps; t++) 
                   if (tcol==cv[t]) { ci[t]++; fnd=true; break; }
               if (!fnd) { 
@@ -177,11 +187,11 @@ void buildRange() {
                   ci[ps]=1; 
                   ps++;
               }
-              if (ps>260) break;
+              if (ps>255) break;
               fnd=false;
             }
 // Sorting
-        for (t=0; t<ps; t++){
+        for (t=0; t<16; t++){
            int max=0;
            for (i=t; i<ps; i++) 
                if (ci[i]>max) { max=ci[i]; num=i; }
@@ -190,58 +200,41 @@ void buildRange() {
                tmp=cv[t]; cv[t]=cv[num]; cv[num]=tmp; 
              } 
         }
-}
-
-void get16colors() {
-        int t=0, i=0;
-        if (ps<16) 
+        
+        
+        if (ps<16) {
           for (t=ps; t<16; t++) cv[t]=0;
-        for (t=15; t>0; t--){
-           int max=cv[t];
-           for (i=t-1; i>=0; i--) 
-               if (cv[i]>max) { max=cv[i]; num=i; }
-           if (max>cv[t]) { 
-               tmp=cv[t]; cv[t]=cv[num]; cv[num]=tmp; 
-             } 
+          ps=16;
         }
+
+        for (t=15; t>0; t--)
+           for (i=t-1; i>=0; i--) 
+               if ((cv[t]&0x00FFFFFF)<(cv[i]&0x00FFFFFF)) { tmp=cv[t]; cv[t]=cv[i]; cv[i]=tmp;}
+               
 }
 
 void convertSC57(){
-int tcol=0;
-int t=0, i=0, curY=0;
-PImage Img57;
-        if (color_mode_code<6) { Img57=ImgPreview; curY=fullY;}//212;}
-        else { 
-            Img57=Interlaced; curY=fullY*2;//424;
-            Interlaced.beginDraw();
-          }
-        buildRange();
-        get16colors();
-
-        Img57.loadPixels();
-        for (j=0; j < curY; j++) 
-            for (i=0; i < fullX; i++) {
-                    tcol=Img57.pixels[i+j*512];
-                    tmp=15;
-                    for (t=0; t<15; t++) 
-                        if (cv[t]>=tcol) break;
-                    Img57.pixels[i+j*512]=cv[t];
-            }
-        Img57.updatePixels();
-        if (color_mode_code>5) Interlaced.endDraw();
+     if (CustomPal){ 
+        for (int t=0; t<16; t++) {cv[t]=customPAL[customPAL_num][t]; co[t]=t;}
+        for (int t=15; t>0; t--)
+           for (i=t-1; i>=0; i--) 
+               if (cv[t]<cv[i]) { 
+                 tmp=cv[t]; cv[t]=cv[i]; cv[i]=tmp;
+                 tmp=co[t]; co[t]=co[i]; co[i]=tmp;
+               }
+     } else buildRange();
+     repaint.set("inPAL", cv);
+     Interlaced.filter(repaint);
 }
 
 void save_SC57() {
         int tcol=0;
         int t=0, i=0, y_step=1;
-        buildRange();
-        get16colors();
         String code = "10 SCREEN 5;20 BLOAD"+(char)34+"img.s50"+(char)34+",s";
         String OutFile;
 
 // Save to SC5-7
-        PImage Img57=ImgPreview;
-        if (color_mode_code>5) { Img57=Interlaced; y_step=2;}
+        if (color_mode_code>5) { y_step=2;}
         for (j=0; j<y_step; j++) {
             OutFile=ImgOut+".s5"+j;
             if ((color_mode_code==5)||(color_mode_code==7))  OutFile=ImgOut+".s7"+j;
@@ -260,21 +253,22 @@ void save_SC57() {
                 }
         
                 int col=0;
-                Img57.loadPixels();
+                Interlaced.loadPixels();
                 for (int m=0; m<212; m++) {
                     for (i=0; i<fullX; i++) {
                         int offs=(m*y_step+j)*512+i;
-                        tcol=Img57.pixels[offs];
+                        tcol=Interlaced.pixels[offs];
                         tmp=15;
                         for (t=0; t<16; t++) 
-                            if (cv[t]>=tcol) { tmp=t; break; }
-                        Img57.pixels[offs]=cv[tmp];
+                            if ((cv[t]&0xFFFFFF)==(tcol&0xFFFFFF)) { tmp=t; break; }
+                        if (CustomPal) tmp=co[tmp];
+//                        Interlaced.pixels[offs]=cv[tmp]&0xFFFFFF;
                         if ((i&1)==0) tmp<<=4;
                         col|=tmp;
                         if ((i&1)==1) {outp.write(col&0xFF);col=0;}
                     }
                 }
-                Img57.updatePixels();
+                Interlaced.updatePixels();
     
     // Skip to palette by zero
                 if (!key_SHIFT) {
@@ -317,71 +311,76 @@ void save_SC57() {
                 code = "10 SCREEN 5,,,,,3;20 BLOAD"+(char)34+"img.s50"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s51"+(char)34+",s";
             if (color_mode_code==7)
                 code = "10 SCREEN 7,,,,,3;20 BLOAD"+(char)34+"img.s70"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s71"+(char)34+",s";
-            code+=";40 COLOR=RESTORE;50 IFNOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34+";";
+            if (!CustomPal) code+=";40 COLOR=RESTORE"; 
+            code+=";50 IFNOTSTRIG(0)GOTO45;60 RUN"+(char)34+"img.bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
         }
                 
 }
 
-void GetTile(int num){
+void GetTiles(){
+  int num=0;
+  int f1=0, f2=0;
   int t=0, i=0, j=0;
   int c1=0, c2=0;
   int tcol=0;
   int pt=0;
   int max=0,maxn=0;
+  int maxY=0;
+        if (fullY==212) maxY=28; else maxY=32;
 // Fill Name Table
-        tnt[num] = (byte)((num+128) & 255);
-        ImgPreview.loadPixels();
-        println();
-        for (t=(num>>5)*8; t <(num>>5)*8+8; t++){
-            for (j=0; j<16; j++) ci[j]=0;
-//Scan tile line and optimize colors               
-            for (i=(num&31)*8; i <(num&31)*8+8; i++){
-               tcol=ImgPreview.pixels[i+t*512];
-               for (j=0; j<16; j++) {
-                 if (tcol==cv[j]) ci[j]++;
-                 if (tcol==0) break;
-               }
-            }
-            maxn=0; max=0; 
-            for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
-            c1=maxn; ci[maxn]=0;
-            maxn=0; max=0; 
-            for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
-            c2=maxn; ci[maxn]=0;
+        Interlaced.loadPixels();
+        for (num=0; num < 32*maxY; num++) {
+            tnt[num] = (byte)((num+128) & 255);
+            f1=(num&31)*8;
+            f2=(num>>5)*8;
+            for (t=f2; t<f2+8; t++){
+                for (j=0; j<16; j++) ci[j]=0;
+    //Scan tile line and optimize colors
+                for (i=f1; i <f1+8; i++){
+                   tcol=Interlaced.pixels[i+t*512]&0xFFFFFF;
+                   for (j=0; j<16; j++) {
+                     if (tcol==(cv[j]&0xFFFFFF)) ci[j]++;
+                     if (tcol==0) break;
+                   }
+                }
+                maxn=0; max=0; 
+                for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
+                c1=maxn; ci[maxn]=0;
+  
+                maxn=0; max=0; 
+                for (j=0; j<16; j++) if (max<ci[j]) {max=ci[j]; maxn=j;}
+                c2=maxn; ci[maxn]=0;
+    
+                pt=0;
+                for (i=f1; i <f1+8; i++){
+                   tcol=Interlaced.pixels[i+t*512]&0xFFFFFF;
+                   if (tcol==(cv[c1]&0xFFFFFF)) pt<<=1;
+                   else { 
+                     if (tcol!=cv[c2]) Interlaced.pixels[i+t*512]=cv[c2]&0xFFFFFF;
+                     pt<<=1; pt++;
+                   }
+                }
+     // Fill Pattern Table
+                tpt[(int)(f2*32+f1+(t&7))]=(byte)pt;
+     // Fill Color Table                        
+                if (CustomPal) { c1=co[c1]; c2=co[c2]; }
 
-            for (i=(num&31)*8; i <(num&31)*8+8; i++){
-               tcol=ImgPreview.pixels[i+t*512];
-               if ((tcol!=cv[c1])&&(tcol!=cv[c2])) ImgPreview.pixels[i+t*512]=cv[c2]; 
+                tct[(int)(f2*32+f1+(t&7))]=(byte)((c2<<4)|c1);
             }
-            pt=0;
-            for (i=(num&31)*8; i <(num&31)*8+8; i++){
-               tcol=ImgPreview.pixels[i+t*512];
-               if (tcol!=cv[c1]) {pt<<=1; pt++;} else pt<<=1;
-            }
- // Fill Pattern Table
-            tpt[(int)((num>>5)*256+(num&31)*8+(t&7))]=(byte)pt;
- // Fill Color Table
-            tct[(int)((num>>5)*256+(num&31)*8+(t&7))]=(byte)((c2<<4)|c1);
         }
-        ImgPreview.updatePixels();
+        Interlaced.updatePixels();
 }
 
-void GetTiles(){
-int maxY=0;
-        if (fullY==212) maxY=28; else maxY=32;
-        for (j=0; j < 32*maxY; j++) GetTile(j);
-}                  
-
 void ShowGrid(){
-        ImgPreview.loadPixels();
+        Interlaced.loadPixels();
         for (j=0; j < 256; j+=8)
           for (i=0; i < 256; i++) {
-            ImgPreview.pixels[i+j*512]^=0x101010;
-            ImgPreview.pixels[j+i*512]^=0x101010;
+            Interlaced.pixels[i+j*512]^=0x040404;
+            Interlaced.pixels[j+i*512]^=0x040404;
           }
-        ImgPreview.updatePixels();
+        Interlaced.updatePixels();
 }
 
 void SaveTiles(){
@@ -470,8 +469,9 @@ void SaveTiles(){
             if (apply_Basic_header){
                 code = "10 SCREEN4:VDP(10)=VDP(10)OR128:VDP(2)=7:VDP(9)=VDP(9)OR2;";
                 code+="20 BLOAD"+(char)34+"img.s4p"+(char)34+",S:BLOAD"+(char)34+"img.s4n"+(char)34+",S,&H4000;";
-                code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S:COLOR=RESTORE;";
-                code+="40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;";
+                 code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S";
+                if (!CustomPal) code+=":COLOR=RESTORE";
+                code+=";40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34;
                 String[] list = split(code, ';');
                 saveStrings(ImgOut+".bas",list);
             }
@@ -490,7 +490,8 @@ void fileSelected(File selection) {
 
 void SetFont() {
         Screen=createGraphics(1920, 1080, P3D);
-        font = createFont( "Segoe UI", 300, true );
+//        font = createFont( "Segoe UI", 300, true );
+        font = createFont( "Boeing.ttf", 300, true );
         Preview=createGraphics(512, 512, P3D);
         ImgPreview=createImage(512, 512, RGB);;
         P0=createImage(256, 256, RGB);
@@ -550,6 +551,40 @@ void Open_Image() {
 
 }
 
+void SetCropBorders(){
+int ox=0,oy=0;
+int trs=0;
+boolean fnd=false;
+   Img.loadPixels();
+   do {  oy=0;
+         do { trs=Img.pixels[(oy++)*Img.width+ox];
+              trs=((trs>>16)&255)|((trs>>8)&255)|(trs&255);
+              if (trs>5) fnd=true;
+         } while (oy<Img.height);
+         ox++;
+   } while (!fnd);
+   x=ox-1; ox=Img.width; fnd=false; 
+   do {  ox--;
+         oy=0;
+         do { trs=Img.pixels[(oy++)*Img.width+ox];
+             trs=((trs>>16)&255)|((trs>>8)&255)|(trs&255);
+             if (trs>5) fnd=true;
+         } while (oy<Img.height);
+   } while (!fnd);
+   oy=0; dx=ox-x+1; fnd=false;
+   do {  ox=0;
+         do { trs=Img.pixels[oy*Img.width+(ox++)];
+              trs=((trs>>16)&255)|((trs>>8)&255)|(trs&255);
+              if (trs>5) fnd=true;
+         } while (ox<Img.width);
+         oy++;
+   } while (!fnd);
+   y=oy-1;
+   if ((y+dy)>Img.height) dy=Img.height-y;
+
+   Img.updatePixels();
+}
+
 private void maximized() {
     try {       
         final com.jogamp.newt.opengl.GLWindow window = (com.jogamp.newt.opengl.GLWindow) getSurface().getNative();
@@ -565,12 +600,15 @@ private void maximized() {
 }
 
 void setup() {
+//      String[] fontList = PFont.list();
+//      printArray(fontList);
 
       frameRate(175);
       noSmooth();
-      size(1920,1080,P3D); // - windowed mode
+      size(1920,1030,P3D); // - windowed mode
       maximized();
       noSmooth();
+      
 //      smooth(8);
 
         old_w = width; 
@@ -590,6 +628,8 @@ void setup() {
         filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.001,  0.3, 2.0);
         filter[9] = new Filter("9. Noise",    "noise.glsl",  -1.0,    0.3, 1.0);
 
+        repaint     = loadShader("repaint.glsl");
+        cut_colors  = loadShader("cut.glsl");
         background(0);
         SetFont();
         textFont( font );
@@ -615,18 +655,18 @@ void setup() {
 }
 
 void ScaleSrc() {
-        Preview.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
-//        if ((apply_shader)&&(color_mode_code!=3)){ 
+//        if ((apply_shader)&&(color_mode_code!=3)){
+        Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
         if (apply_shader){ 
-            if (shaderNum!=8) Preview.filter(filter[shaderNum].shader);
+            if (shaderNum!=8) Interlaced.filter(filter[shaderNum].shader);
             else {
                 ImgShow.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, (int)(dx), (int)(dy));
                 ImgShow.filter(filter[shaderNum].shader);
-                Preview.copy(ImgShow, 0, 0, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
+                Interlaced.copy(ImgShow, 0, 0, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
             }
-            if (key_SPACE) Preview.filter(filter[shaderNum].shader);
-        }
-        ImgPreview.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY);
+//            if (key_SPACE) Preview.filter(filter[shaderNum].shader);
+        } 
+        //ImgPreview.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY);
         if ((color_mode_code>5)||(color_mode_code==3)) {
                 Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY*2);
                 if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
@@ -638,8 +678,9 @@ void ScaleSrc() {
 
 void coder() {
         int offs=0;
+        ImgPreview.copy(Interlaced, 0, 0, fullX, fullY*2, 0, 0, fullX, fullY*2);
         Interlaced.beginDraw();
-        if (color_mode_code==1) Interlaced.loadPixels();
+//        if (color_mode_code==1) Interlaced.loadPixels();
         ImgPreview.loadPixels(); P0.loadPixels(); P1.loadPixels();
         odd = 1; cnt = 0;
         for (int j = 0; j < fullY; j++) {
@@ -648,7 +689,7 @@ void coder() {
                   r2 = (ImgPreview.pixels[offs]>>16) & 0xF0;
                   g2 = (ImgPreview.pixels[offs]>> 8) & 0xF0;
                   b2 = (ImgPreview.pixels[offs]    ) & 0xE0;
-                  if (color_mode_code==2) ImgPreview.pixels[offs] = color(r2, g2, b2);
+                  if (color_mode_code==2) Interlaced.pixels[offs] = color(r2, g2, b2);
                   r1 = (r2<<1) & 32; r2 &= 0xE0; r1 += r2;
                   g1 = (g2<<1) & 32; g2 &= 0xE0; g1 += g2;
                   b1 = (b2<<1) & 64; b2 &= 0xC0; b1 += b2;
@@ -673,8 +714,8 @@ void coder() {
                   }
             }
         }
-        P1.updatePixels(); P0.updatePixels(); ImgPreview.updatePixels();
-        if (color_mode_code==1) Interlaced.updatePixels();
+        P1.updatePixels(); P0.updatePixels(); Interlaced.updatePixels();
+//        if (color_mode_code==1) Interlaced.updatePixels();
         Interlaced.endDraw();
 }
 
@@ -869,6 +910,9 @@ void Render_Info(){
           if (color_mode_code==6) color_mode="16 Colors (256x424 Screen 5)";
           if (color_mode_code==7) color_mode="16 Colors (512x424 Screen 7)";
           Screen.fill( 0, 255, 170, 255);
+          Screen.text("[F1] TileGen                [F2] Save        [F3] Open         [F4] 212/256", 600,  Screen.height-45);
+          Screen.text("[F4] AutoAspect        [F6] Filter       [F7] Mode         [F8] Flicker", 600,  Screen.height-25);
+          Screen.text("Shader    [F9] <-      [F10] On/Off      [F11] ->         [F12] Reset Shader", 600,  Screen.height-5);
           Screen.text("Mode:",             20,  995);
           Screen.text("Filter:",           20, 1015);
           Screen.text("Shader:",          200, 1015);
@@ -965,6 +1009,7 @@ void draw() {
                       old_w=width; 
                       old_h=height;
                   }
+
                   if ((old_x!=x)||(old_y!=y)||(old_dx!=dx)||(old_dy!=dy)) need_redraw=true;
                   old_x =x;  old_y=y;
                   old_dx=dx; old_dy=dy;
@@ -1050,7 +1095,8 @@ void draw() {
                   }
        
                   if (key_SPACE) {
-//                      key_SPACE    = false;
+                      SetCropBorders();
+                      key_SPACE    = false;
                   }
       
                   if (key_F2) {
@@ -1199,23 +1245,37 @@ void draw() {
               }
               if (key_SHIFT) apply_Basic_header=false; else apply_Basic_header=true;
               
-                  if (key_F1) {
-                      if (color_mode_code==4) GridEnabled   ^= true; 
+              if (key_F1) {
+                      color_mode_code=4; 
+                      GridEnabled   ^= true; 
 //                      TilesReady     = false; 
+                      fullX=256;
                       key_F1         = false;
+              }
+              if (key_TAB) {
+                  if (color_mode_code>3) {    // Switch Palette
+                      if (!CustomPal) CustomPal^=true;
+                      else {
+                          customPAL_num++;
+                          if (customPAL_num>1) { customPAL_num=0; CustomPal=false; }
+                      }
                   }
+                   key_TAB=false;
+              }
 
-              Screen.beginDraw();
-              Screen.copy(Lens, 0, 0, Lens.width, Lens.height, 1899-Lens.width, 20, Lens.width, Lens.height);
-              i=848; 
+              int outY=848; 
+              if (fullY==256) outY=955;
+              int frameY=fullY;
+              
               if ((color_mode_code>1)&&(color_mode_code<6)&&(color_mode_code!=3)){
-                  if (fullY==256) i=955;
-                  Screen.copy(ImgPreview, 0, 0, fullX, fullY, 20, 20, 1024, i);
               }
               else {
-                  if (fullY==256) i=955;
-                  Screen.copy(Interlaced, 0, 0, fullX, fullY*2, 20, 20, 1024, i);
+                frameY<<=1;
               }
+              ImgPreview.copy(Interlaced, 0, 0, fullX, frameY, 0, 0, fullX, frameY);
+              Screen.beginDraw();
+              Screen.copy(Lens, 0, 0, Lens.width, Lens.height, 1899-Lens.width, 20, Lens.width, Lens.height);
+              Screen.copy(ImgPreview, 0, 0, fullX, frameY, 20, 20, 1024, outY);
                
               Screen.blendMode(BLEND);
               Screen.fill( 0, 0, 0, 128);
@@ -1228,11 +1288,17 @@ void draw() {
               }
 
               if (color_mode_code>3) {    // Draw Palette bar
+                   Screen.fill( 0, 255, 170, 255);
                   //Screen.stroke(255,215,255, 0);
+                   if (CustomPal) { 
+                          if (customPAL_num==0) Screen.text("Custom palette MSX:", 400, outY+42);
+                          else  Screen.text("Custom palette User:", 400, outY+42);
+                   } else Screen.text("Dynamic palette:",400, outY+42);
                   Screen.noStroke();
                   for (int t=0; t<16; t++){ 
-                        Screen.fill( (cv[t]>>16)&255, (cv[t]>>8)&255, cv[t]&255, 128);
-                        Screen.rect(549+t*31, i+28, 30, 30);
+                   if (CustomPal) Screen.fill( (customPAL[customPAL_num][t]>>16)&255, (customPAL[customPAL_num][t]>>8)&255, customPAL[customPAL_num][t]&255, 128);
+                   else Screen.fill( (cv[t]>>16)&255, (cv[t]>>8)&255, cv[t]&255, 128);
+                        Screen.rect(549+t*31, outY+28, 30, 30);
                   }
               }
               Screen.endDraw();
@@ -1249,7 +1315,7 @@ void draw() {
           if ((flicker)||(need_redraw)) {copy(Screen, 0, 0, 1920,1080, 0,0, width, height); }
 
           mouse_clr=get(mouseX,mouseY);
-          ShowFPS(width-width/10, height-height/48);
+          ShowFPS(width-width/8, height-height/48);
 }
 
 void ShowFPS(int xpos, int ypos) {
@@ -1261,7 +1327,7 @@ void ShowFPS(int xpos, int ypos) {
   stroke(0,100,150); fill(20,25,25); rect(xpos,ypos,width-xpos,height-ypos-1);
   textSize(width/120); stroke(1); fill( 255, 255, 0);
   String fps=String.format( "%.2f", fc )+" fps ("+String.format( "%.2f", maxfc )+" max)";
-  text( fps, width-fps.length()*(width/240), ypos+width/120+8);
+  text( fps, width-fps.length()*(width/180), ypos+width/120+8);
 }
 
 void windowResized(){
@@ -1296,6 +1362,7 @@ void keyPressed() {
   if ( keyCode == 141   )    key_RMULT = true;
   if ( keyCode == 147   )    key_DEL   = true;
   if ( keyCode == 11    )    key_PGDOWN= true;
+  if ( keyCode == 9     )    key_TAB   = true;
  //  println(keyCode);
 }
 
@@ -1325,4 +1392,6 @@ void keyReleased() {
   if ( keyCode == 141   )    key_RMULT = false;
   if ( keyCode == 147   )    key_DEL   = false;
   if ( keyCode == 11    )    key_PGDOWN= false;
+  if ( keyCode == 9     )    key_TAB   = false;
+  
 }
