@@ -44,8 +44,8 @@ void main(void) {
    vec3 srt;
 	minL=9999.0;
 	for(int i=0;i<16;i++){
-		srt = dest - vec3((sorted[i]>>16) & 0xE0, (sorted[i]>>8) & 0xE0, sorted[i] & 0xE0) / 224.0;
-		srt = sqrt( srt * srt );
+		srt = vec3((sorted[i]>>16) & 0xE0, (sorted[i]>>8) & 0xE0, sorted[i] & 0xE0) / 255.0;
+		srt = sqrt(abs(dest * dest - srt * srt));
 		tmc = srt.r + srt.g + srt.b;
 		if (tmc<minL) { minL=tmc; nm=i; }
 	}
