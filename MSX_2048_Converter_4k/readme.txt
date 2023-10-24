@@ -9,15 +9,16 @@
 Download Processing : https://processing.org/download
 Run and Open PDE file inside, then press CTRL + R
 
-[F1] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables
+[F1 ] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables
 [F2 ] : Save current mode image in MSX2 Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)
 [F3 ] : Open File Dialog
 [F4 ] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)
+        Also in Tile Generator switch height 24/32 tile raws
 
 [F5 ] : Toogle Auto Aspect Rate ( On(*) / Off )
 [F6 ] : Select Interpolation Filter (Point, Linear(*), Bilinear, Trilinear)
 [F8 ] : Preview mode with fast flicker for 256/2048(*) Output Images (3)
-[F7 ] : Switch color mode (256/2048(*)/16M colors) in cycle (1)
+[F7 ] : Switch color mode (256/2048(*)/16M colors/Palette 16c (256x212 / 512x212 / 256x424 / 512x424)) in cycle (1)
 	With [SHIFT] - switch backward
 
 [F9 ] : Switch backward Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)
@@ -25,7 +26,8 @@ Run and Open PDE file inside, then press CTRL + R
 [F11] : Switch forward  Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)
 [F12] : Reload source image (without reseting sellected options)
 
-    [TAB]    : Switch Palette (Dynamic(*) / Custom Fixed)
+     [TAB]   : Switch Palette (Dynamic(*) / Custom Fixed)
+[SHIFT] + [TAB]    : Switch Custom User Palette Sorting (Deny(*) / Allow)
     [SPACE]  : Try automaticaly find frame size on black background
     [ARROWS] : Slow Move output area in Lens window
 [SHIFT] + [ARROWS] : Fast Move output area in Lens window
@@ -39,8 +41,8 @@ Additional numerical keyboard:
 [MINUS] : Decrease Shader Filter strength
 [MULT ] : Reset shader to default value
 
-[CRTL] + [PLUS ]   : Slow Proportionally Increase output area in Lens window 
-[CRTL] + [MINUS]   : Slow Proportionally Decrease output area in Lens window 
+[CRTL] + [PLUS ]   : Slow Zoom Out (Proportionally Increase) output area in Lens window
+[CRTL] + [MINUS]   : Slow Zoom In  (Proportionally Decrease) output area in Lens window
 		     With [SHIFT] - the same changes are accelerated.
 [CRTL] + [MULT ]   : Maximize the output area in the Lens window in X or Y, 
 		     depending on the proportions of the image in the Lens
