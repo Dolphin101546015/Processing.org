@@ -10,15 +10,16 @@
 // Download Processing : https://processing.org/download                                                                          //
 // Run and Open PDE file inside, then press CTRL + R                                                                              //
 //                                                                                                                                //
-//  [F1] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables    //
-//  [F2] : Save current mode image in MSX2/2+ Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)           //
-//  [F3] : Open File Dialog                                                                                                       //
-//  [F4] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)      //
+//  [F1 ] : Enable Tile Generator (Auto switch mode to 16c 256x212): Enable Tiles Grid and Analyser + Rebuilder for Tile Tables   //
+//  [F2 ] : Save current mode image in MSX2/2+ Basic format with headers ( [SHIFT]+[F2] in Plain Format without headers)          //
+//  [F3 ] : Open File Dialog                                                                                                      //
+//  [F4 ] : Toogle Height of Output Images (256(*)/212) (Basic able to load images with 212 raws, even files stored with 256)     //
+//          Also in Tile Generator switch height 24(*)/32 tile raws                                                               //
 //                                                                                                                                //
 //  [F5 ] : Toogle Auto Aspect Rate ( On(*) / Off )                                                                               //
 //  [F6 ] : Select Interpolation Filter (Point, Linear(*), Bilinear, Trilinear)                                                   //
 //  [F8 ] : Preview mode with fast flicker for 256/2048(*) Output Images (3)                                                      //
-//  [F7 ] : Switch color mode (256/2048(*)/16M colors) in cycle (1)                                                               //
+//  [F7 ] : Switch color mode (256/2048(*)/16M colors/Palette 16c ( 256x212 / 512x212 / 256x424 / 512x424 )) in cycle (1)         //
 //          With [SHIFT] - switch backward                                                                                        //
 //                                                                                                                                //
 //  [F9 ] : Switch backward Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)                      //
@@ -26,11 +27,14 @@
 //  [F11] : Switch forward  Shader Filter(2), 1-pass on output surfaces (With SHIFT - apply to Source Image)                      //
 //  [F12] : Reload source image (without reseting sellected options)                                                              //
 //                                                                                                                                //
-//  [SPACE]  : Try automaticaly find frame size on black background                                                               //
-//  [ARROWS] : Slow Move output area in Lens window                                                                               //
+//  [TAB]   : Switch Palette (Dynamic(*) / Custom Fixed)                                                                          //
+//  [SHIFT] + [TAB]    : Switch Custom User Palette Sorting (Deny(*) / Allow)                                                     //
+//                                                                                                                                //
+//  [SPACE] : Try automaticaly find frame size on black background                                                                //
+//  [ARROWS]: Slow Move output area in Lens window                                                                                //
 //  [SHIFT] + [ARROWS] : Fast Move output area in Lens window                                                                     //
 //                                                                                                                                //
-//  [CTRL] + [ARROWS] : Slow Resize output area in Lens window                                                                    //
+//  [CTRL]  + [ARROWS] : Slow Resize output area in Lens window                                                                   //
 //  [SHIFT] + [CTRL] + [ARROWS] : Fast Resize output area in Lens window                                                          //
 //                                                                                                                                //
 //  Additional numerical keyboard:                                                                                                //
@@ -39,8 +43,8 @@
 //  [MINUS] : Decrease Shader Filter strength                                                                                     //
 //  [MULT ] : Reset shader to default value                                                                                       //
 //                                                                                                                                //
-//  [CRTL] + [PLUS ]   : Slow Proportionally Increase output area in Lens window                                                  //
-//  [CRTL] + [MINUS]   : Slow Proportionally Decrease output area in Lens window                                                  //
+//  [CRTL] + [PLUS ]   : Slow Zoom Out (Proportionally Increase) output area in Lens window                                       //
+//  [CRTL] + [MINUS]   : Slow Zoom In  (Proportionally Decrease) output area in Lens window                                       //
 //                       With [SHIFT] - the same changes are accelerated.                                                         //
 //  [CRTL] + [MULT ]   : Maximize the output area in the Lens window by Width or Height,                                          // 
 //                       depending on the proportions of the Image in the Lens                                                    //
@@ -53,7 +57,7 @@
 //  (*) - Default value                                                                                                           //
 //  (1) - 256 colors mode have coding output for Interlace, 2048 colors mode switch every output pixels between frames.           //
 //  (2) - One Shader Filter from: Sharpen, Contrast, Gamma, Solaris, Saturat, Temper, Emboss, Dithering, Denoise, Noise,          //
-//      For apply several filters, apply every needed sequentially by pressing [SHIFT]+([F9] or [F11]) on every sellected filter. //
+// For applying several filters, use every you needed sequentially by pressing [SHIFT]+([F9] or [F11]) on every sellected filter. //
 //  (3) - Saving in 16M mode, generate YJK files with extended ranges (more than 19k colors), for MSX2+ SCREEN12                  //
 //        All active shaders working also.                                                                                        //
 //                                                                                                                                //
@@ -66,9 +70,13 @@ String      SourceImage="yenn.png";
 //                          Custom Palette (16 colors 0xRRGGBB)
 static int customPAL[][]={{0x000000,0x000000,0x20C020,0x60E060,0x2020E0,0x4060E0,0xA02020,0x40C0E0,    //  Custom MSX Palette
                            0xE02020,0xE06060,0xC0C020,0xC0C080,0x208020,0xC040A0,0xA0A0A0,0xE0E0E0},
-                          {0x000000,0x000000,0x60C060,0xA0E0A0,0x4040E0,0x6080E0,0xA04040,0x60C0E0,    //  Custom User Palette
-                           0xE04040,0xE08080,0xC0C040,0xC0C0A0,0x40A040,0xC040A0,0xA0A0A0,0xE0E0E0}};
-int customPAL_num=0;                           
+                          {0x000000,0x002020,0x008000,0x20E020,0x0000C0,0x2080E0,0x800000,0x60E0E0,    //  Custom User MSX Palette
+                           0xE02020,0xE06040,0xE0A000,0xE0E000,0x006000,0x606060,0xA0A0A0,0xE0E0E0},
+                          {0x000000,0x000080,0x0000E0,0x2020E0,0x4040E0,0x6060E0,0x8080E0,0xA0A0E0,    //  Custom User Palette 2
+                           0xC0C0E0,0xE0E0E0,0xC0C0C0,0xA0A0A0,0x808080,0x606060,0x404040,0x202020}};
+int         customPAL_num      = 0;                           
+int         max_customPAL      = 2;                           
+boolean     allow_sorting_PAL  = false;                           
 
 PShader     cut_colors;
 PShader     repaint;
@@ -100,6 +108,7 @@ int         old_x, old_y;
 float       old_dx, old_dy;
 int         fullX;
 int         fullY;
+int         outY; 
 int         lx, ly;
 float       ldx, ldy;
 float       min, max, val;
@@ -220,7 +229,9 @@ void convertSC57(){
            for (i=t-1; i>=0; i--) 
                if (cv[t]<cv[i]) { 
                  tmp=cv[t]; cv[t]=cv[i]; cv[i]=tmp;
-                 tmp=co[t]; co[t]=co[i]; co[i]=tmp;
+                 if ((CustomPal)&&(allow_sorting_PAL)) {
+                     tmp=co[t]; co[t]=co[i]; co[i]=tmp;
+                 }
                }
      } else buildRange();
      repaint.set("inPAL", cv);
@@ -230,7 +241,7 @@ void convertSC57(){
 void save_SC57() {
         int tcol=0;
         int t=0, i=0, y_step=1;
-        String code = "10 SCREEN 5;20 BLOAD"+(char)34+"img.s50"+(char)34+",s";
+        String code = "10 SCREEN 5;20 BLOAD"+(char)34+"img.s50"+(char)34+",s;40";
         String OutFile;
 
 // Save to SC5-7
@@ -261,7 +272,8 @@ void save_SC57() {
                         tmp=15;
                         for (t=0; t<16; t++) 
                             if ((cv[t]&0xFFFFFF)==(tcol&0xFFFFFF)) { tmp=t; break; }
-                        if (CustomPal) tmp=co[tmp];
+//                        if ((CustomPal)&&(customPAL_num==0)) 
+                        tmp=co[tmp];
 //                        Interlaced.pixels[offs]=cv[tmp]&0xFFFFFF;
                         if ((i&1)==0) tmp<<=4;
                         col|=tmp;
@@ -306,13 +318,13 @@ void save_SC57() {
         }
         if (apply_Basic_header){
             if (color_mode_code==5)
-                code = "10 SCREEN 7;20 BLOAD"+(char)34+"img.s70"+(char)34+",s";
+                code = "10 SCREEN 7;20 BLOAD"+(char)34+"img.s70"+(char)34+",s;40";
             if (color_mode_code==6)
-                code = "10 SCREEN 5,,,,,3;20 BLOAD"+(char)34+"img.s50"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s51"+(char)34+",s";
+                code = "10 SCREEN 5,,,,,3;20 BLOAD"+(char)34+"img.s50"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s51"+(char)34+",s;40";
             if (color_mode_code==7)
-                code = "10 SCREEN 7,,,,,3;20 BLOAD"+(char)34+"img.s70"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s71"+(char)34+",s";
-            if (!CustomPal) code+=";40 COLOR=RESTORE"; 
-            code+=";50 IFNOTSTRIG(0)GOTO45;60 RUN"+(char)34+"img.bas"+(char)34+";";
+                code = "10 SCREEN 7,,,,,3;20 BLOAD"+(char)34+"img.s70"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s71"+(char)34+",s;40 ";
+            if ((CustomPal)&&(customPAL_num==0)) code+="'"; 
+            code+="COLOR=RESTORE;50 IFNOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
         }
@@ -365,7 +377,7 @@ void GetTiles(){
      // Fill Pattern Table
                 tpt[(int)(f2*32+f1+(t&7))]=(byte)pt;
      // Fill Color Table                        
-                if (CustomPal) { c1=co[c1]; c2=co[c2]; }
+                c1=co[c1]; c2=co[c2];
 
                 tct[(int)(f2*32+f1+(t&7))]=(byte)((c2<<4)|c1);
             }
@@ -469,9 +481,9 @@ void SaveTiles(){
             if (apply_Basic_header){
                 code = "10 SCREEN4:VDP(10)=VDP(10)OR128:VDP(2)=7:VDP(9)=VDP(9)OR2;";
                 code+="20 BLOAD"+(char)34+"img.s4p"+(char)34+",S:BLOAD"+(char)34+"img.s4n"+(char)34+",S,&H4000;";
-                 code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S";
-                if (!CustomPal) code+=":COLOR=RESTORE";
-                code+=";40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34;
+                code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S:";
+                if ((CustomPal)&&(customPAL_num==0)) code+="'"; 
+                code+=":COLOR=RESTORE;40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34;
                 String[] list = split(code, ';');
                 saveStrings(ImgOut+".bas",list);
             }
@@ -620,13 +632,13 @@ void setup() {
         filter[0] = new Filter("0. Sharpen" ,  "sharp.glsl",  0.0,    0.15,2.0);
         filter[1] = new Filter("1. Contrast", "contra.glsl", -3.0,    1.0, 3.0);
         filter[2] = new Filter("2. Gamma"   ,  "gamma.glsl",  0.0,    1.0, 4.0);
-        filter[3] = new Filter("3. Saturat" , "satura.glsl", -3.0,    1.0, 3.0);
-        filter[4] = new Filter("4. Solaris" ,  "solar.glsl", -2.0,    0.0, 2.0);
-        filter[5] = new Filter("5. Temper"  , "temper.glsl",  0.1539, 1.0, 4.0);
+        filter[3] = new Filter("3. Saturat" , "satura.glsl", -4.0,    1.0, 4.0);
+        filter[4] = new Filter("4. Solaris" ,  "solar.glsl", -3.0,    0.0, 3.0);
+        filter[5] = new Filter("5. Temper"  , "temper.glsl",  0.1539, 1.0, 3.0);
         filter[6] = new Filter("6. Emboss"  , "emboss.glsl", -2.0,    0.0, 2.0);
         filter[7] = new Filter("7. Dithering","dither.glsl", -2.0,    0.5, 2.0);
-        filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.001,  0.3, 2.0);
-        filter[9] = new Filter("9. Noise",    "noise.glsl",  -1.0,    0.3, 1.0);
+        filter[8] = new Filter("8. Denoise",  "denoise.glsl", 0.001,  0.3, 3.0);
+        filter[9] = new Filter("9. Noise",    "noise.glsl",  -2.0,    0.3, 2.0);
 
         repaint     = loadShader("repaint.glsl");
         cut_colors  = loadShader("cut.glsl");
@@ -917,6 +929,7 @@ void Render_Info(){
           Screen.text("Filter:",           20, 1015);
           Screen.text("Shader:",          200, 1015);
           Screen.text("Coding Mode:",      20, 1035);
+          if (color_mode_code>3) Screen.text("Sorting:",         200, 1035);
           Screen.text("Flicker:",          20, 1055);
           Screen.text("Auto Aspect:",      20, 1075);
           Screen.text("X:",               200, 1055);
@@ -941,6 +954,9 @@ void Render_Info(){
           if ((coder_mode==1) && (color_mode_code<6)) 
                Screen.text("Flicker",     125, 1035);
           else Screen.text("Interlace",   125, 1035);
+          if (color_mode_code>3)
+            if (allow_sorting_PAL) Screen.text("Allow",         280, 1035);
+            else                   Screen.text("Deny",          280, 1035);
 
           if (flicker) Screen.text("On",  125, 1055);
           else         Screen.text("Off", 125, 1055);
@@ -1253,17 +1269,20 @@ void draw() {
                       key_F1         = false;
               }
               if (key_TAB) {
-                  if (color_mode_code>3) {    // Switch Palette
-                      if (!CustomPal) CustomPal^=true;
-                      else {
-                          customPAL_num++;
-                          if (customPAL_num>1) { customPAL_num=0; CustomPal=false; }
+                  if (key_SHIFT) {
+                    if (customPAL_num>0) allow_sorting_PAL^=true;
+                  } else
+                      if (color_mode_code>3) {    // Switch Palette
+                          if (!CustomPal) CustomPal^=true;
+                          else {
+                              customPAL_num++;
+                              if (customPAL_num>max_customPAL) { customPAL_num=0; CustomPal=false; }
+                          }
                       }
-                  }
                    key_TAB=false;
               }
 
-              int outY=848; 
+              outY=848; 
               if (fullY==256) outY=955;
               int frameY=fullY;
               
@@ -1291,17 +1310,16 @@ void draw() {
                    Screen.fill( 0, 255, 170, 255);
                   //Screen.stroke(255,215,255, 0);
                    if (CustomPal) { 
-                          if (customPAL_num==0) Screen.text("Custom palette MSX:", 400, outY+42);
-                          else  Screen.text("Custom palette User:", 400, outY+42);
-                   } else Screen.text("Dynamic palette:",400, outY+42);
+                          if (customPAL_num==0) Screen.text("Custom palette MSX:", 395, outY+42);
+                          else  Screen.text("Custom palette User "+(customPAL_num-1)+":", 395, outY+42);
+                   } else Screen.text("Dynamic palette:",395, outY+42);
                   Screen.noStroke();
                   for (int t=0; t<16; t++){ 
-                   if (CustomPal) Screen.fill( (customPAL[customPAL_num][t]>>16)&255, (customPAL[customPAL_num][t]>>8)&255, customPAL[customPAL_num][t]&255, 128);
+                   if (CustomPal) Screen.fill( (customPAL[customPAL_num][co[t]]>>16)&255, (customPAL[customPAL_num][co[t]]>>8)&255, customPAL[customPAL_num][co[t]]&255, 128);
                    else Screen.fill( (cv[t]>>16)&255, (cv[t]>>8)&255, cv[t]&255, 128);
                         Screen.rect(549+t*31, outY+28, 30, 30);
                   }
               }
-              Screen.endDraw();
 
           }
         
@@ -1309,9 +1327,10 @@ void draw() {
           if (flicker) {
               flick^=1;
               Screen.blendMode(REPLACE );
-              if (flick==0) Screen.copy(P0, 0, 0, 256, fullY, 20, 20, 1024, i);
-              else          Screen.copy(P1, 0, 0, 256, fullY, 20, 20, 1024, i);
+              if (flick==0) Screen.copy(P0, 0, 0, 256, fullY, 20, 20, 1024, outY);
+              else          Screen.copy(P1, 0, 0, 256, fullY, 20, 20, 1024, outY);
           } 
+          Screen.endDraw();
           if ((flicker)||(need_redraw)) {copy(Screen, 0, 0, 1920,1080, 0,0, width, height); }
 
           mouse_clr=get(mouseX,mouseY);
