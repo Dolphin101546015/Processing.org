@@ -667,7 +667,12 @@ void setup() {
 
 void ScaleSrc() {
         if ((color_mode_code>5)||(color_mode_code==3)) outY=fullY*2; else outY=fullY;
+        Interlaced.beginDraw();
+        Interlaced.blendMode(REPLACE );
         Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, outY);
+        if ((dy>outY)&&((y+dy+1)<Img.height)) Interlaced.blend(Img, x, y+1, (int)(dx), (int)(dy), 0, 0, fullX, outY, BLEND );
+        Interlaced.endDraw();
+
         if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
         if (color_mode_code>3) convertSC57();
         if (color_mode_code<3) coder();
@@ -678,7 +683,7 @@ void coder() {
         int offs=0;
         ImgPreview.copy(Interlaced, 0, 0, fullX, fullY*2, 0, 0, fullX, fullY*2);
         Interlaced.beginDraw();
-//        if (color_mode_code==1) Interlaced.loadPixels();
+        Interlaced.loadPixels();
         ImgPreview.loadPixels(); P0.loadPixels(); P1.loadPixels();
         odd = 1; cnt = 0;
         for (int j = 0; j < fullY; j++) {
@@ -688,7 +693,7 @@ void coder() {
                   r2 = (b2>>16) & 0xF0;
                   g2 = (b2>> 8) & 0xF0;
                   b2&= 0xE0;
-                  Interlaced.pixels[offs] =(r2<<16)|(g2<<8)|b2;
+                  if (color_mode_code==2) Interlaced.pixels[offs] =(r2<<16)|(g2<<8)|b2;
                   r1 = (r2<<1) & 32; r2 &= 0xE0; r1 += r2; if (r1>255) r1=0xE0;
                   g1 = (g2<<1) & 32; g2 &= 0xE0; g1 += g2; if (g1>255) g1=0xE0;
                   b1 = (b2<<1) & 64; b2 &= 0xC0; b1 += b2; if (b1>255) b1=0xC0;
@@ -715,7 +720,7 @@ void coder() {
             }
         }
         P1.updatePixels(); P0.updatePixels(); Interlaced.updatePixels();
-//        if (color_mode_code==1) Interlaced.updatePixels();
+        Interlaced.updatePixels();
         Interlaced.endDraw();
 }
 
