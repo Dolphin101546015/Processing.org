@@ -43,12 +43,12 @@
 //  [MINUS] : Decrease Shader Filter strength                                                                                     //
 //  [MULT ] : Reset shader to default value                                                                                       //
 //                                                                                                                                //
-//  [CRTL] + [PLUS ]   : Slow Zoom Out (Proportionally Increase) output area in Lens window                                       //
-//  [CRTL] + [MINUS]   : Slow Zoom In  (Proportionally Decrease) output area in Lens window                                       //
+//  [CTRL] + [PLUS ]   : Slow Zoom Out (Proportionally Increase) output area in Lens window                                       //
+//  [CTRL] + [MINUS]   : Slow Zoom In  (Proportionally Decrease) output area in Lens window                                       //
 //                       With [SHIFT] - the same changes are accelerated.                                                         //
-//  [CRTL] + [MULT ]   : Maximize the output area in the Lens window by Width or Height,                                          // 
+//  [CTRL] + [MULT ]   : Maximize the output area in the Lens window by Width or Height,                                          // 
 //                       depending on the proportions of the Image in the Lens                                                    //
-//  [CRTL]             : Apply current filter to native showed Image fragment                                                     // 
+//  [CTRL]             : Apply current filter to native showed Image fragment                                                     // 
 //                                                                                                                                //
 //  [ESC]   : Exit without saving outputs                                                                                         //
 //                                                                                                                                //
@@ -72,8 +72,8 @@ static int customPAL[][]={{0x000000,0x000000,0x20C020,0x60E060,0x2020E0,0x4060E0
                            0xE02020,0xE06060,0xC0C020,0xC0C080,0x208020,0xC040A0,0xA0A0A0,0xE0E0E0},
                           {0x000000,0x002020,0x008000,0x20E020,0x0000C0,0x2080E0,0x800000,0x60E0E0,    //  Custom User MSX Palette
                            0xE02020,0xE06040,0xE0A000,0xE0E000,0x006000,0x606060,0xA0A0A0,0xE0E0E0},
-                          {0x000000,0x000080,0x0000E0,0x2020E0,0x4040E0,0x6060E0,0x8080E0,0xA0A0E0,    //  Custom User Palette 2
-                           0xC0C0E0,0xE0E0E0,0xC0C0C0,0xA0A0A0,0x808080,0x606060,0x404040,0x202020}};
+                          {0x000000,0x606060,0xA0A0A0,0xE0E0E0,0x600080,0x200040,0x0000A0,0x0000E0,    //  Custom User Palette 2
+                           0x008060,0x004020,0x00A000,0x00E000,0x806000,0x402000,0xA00000,0xE00000}};
 int         customPAL_num      = 0;                           
 int         max_customPAL      = 2;                           
 boolean     allow_sorting_PAL  = false;                           
@@ -186,9 +186,10 @@ void buildRange() {
         for (t=0; t<16; t++) cv[t]=0;
         Interlaced.filter(cut_colors);
         Interlaced.loadPixels();
-        for (j=0; j < curY; j++)
+        for (j=0; j < curY; j++) {
+            if (ps>255) break;
             for (i=0; i < fullX; i++) {
-              tcol=Interlaced.pixels[i+j*512];
+              tcol=Interlaced.pixels[i+(j<<9)]&0x00FFFFFF;
               for (t=0; t<=ps; t++) 
                   if (tcol==cv[t]) { ci[t]++; fnd=true; break; }
               if (!fnd) { 
@@ -199,7 +200,8 @@ void buildRange() {
               if (ps>255) break;
               fnd=false;
             }
-// Sorting
+        }
+// Get 16
         for (t=0; t<16; t++){
            int max=0;
            for (i=t; i<ps; i++) 
@@ -210,7 +212,7 @@ void buildRange() {
              } 
         }
         
-        
+// Sorting
         if (ps<16) {
           for (t=ps; t<16; t++) cv[t]=0;
           ps=16;
@@ -218,7 +220,7 @@ void buildRange() {
 
         for (t=15; t>0; t--)
            for (i=t-1; i>=0; i--) 
-               if ((cv[t]&0x00FFFFFF)<(cv[i]&0x00FFFFFF)) { tmp=cv[t]; cv[t]=cv[i]; cv[i]=tmp;}
+               if (cv[t]<cv[i]) { tmp=cv[t]; cv[t]=cv[i]; cv[i]=tmp;}
                
 }
 
@@ -272,9 +274,7 @@ void save_SC57() {
                         tmp=15;
                         for (t=0; t<16; t++) 
                             if ((cv[t]&0xFFFFFF)==(tcol&0xFFFFFF)) { tmp=t; break; }
-//                        if ((CustomPal)&&(customPAL_num==0)) 
                         tmp=co[tmp];
-//                        Interlaced.pixels[offs]=cv[tmp]&0xFFFFFF;
                         if ((i&1)==0) tmp<<=4;
                         col|=tmp;
                         if ((i&1)==1) {outp.write(col&0xFF);col=0;}
@@ -340,7 +340,8 @@ void GetTiles(){
   int pt=0;
   int max=0,maxn=0;
   int maxY=0;
-        if (fullY==212) maxY=28; else maxY=32;
+//        if (fullY==212) maxY=28; else maxY=32;
+        maxY=32;
 // Fill Name Table
         Interlaced.loadPixels();
         for (num=0; num < 32*maxY; num++) {
@@ -389,8 +390,8 @@ void ShowGrid(){
         Interlaced.loadPixels();
         for (j=0; j < 256; j+=8)
           for (i=0; i < 256; i++) {
-            Interlaced.pixels[i+j*512]^=0x040404;
-            Interlaced.pixels[j+i*512]^=0x040404;
+            Interlaced.pixels[i+j*512]^=0x060606;
+            Interlaced.pixels[j+i*512]^=0x060606;
           }
         Interlaced.updatePixels();
 }
@@ -502,7 +503,6 @@ void fileSelected(File selection) {
 
 void SetFont() {
         Screen=createGraphics(1920, 1080, P3D);
-//        font = createFont( "Segoe UI", 300, true );
         font = createFont( "Boeing.ttf", 300, true );
         Preview=createGraphics(512, 512, P3D);
         ImgPreview=createImage(512, 512, RGB);;
@@ -615,8 +615,7 @@ void setup() {
 //      String[] fontList = PFont.list();
 //      printArray(fontList);
 
-      frameRate(175);
-      noSmooth();
+//      frameRate(175);
       size(1920,1030,P3D); // - windowed mode
       maximized();
       noSmooth();
@@ -667,22 +666,9 @@ void setup() {
 }
 
 void ScaleSrc() {
-//        if ((apply_shader)&&(color_mode_code!=3)){
-        Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
-        if (apply_shader){ 
-            if (shaderNum!=8) Interlaced.filter(filter[shaderNum].shader);
-            else {
-                ImgShow.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, (int)(dx), (int)(dy));
-                ImgShow.filter(filter[shaderNum].shader);
-                Interlaced.copy(ImgShow, 0, 0, (int)(dx), (int)(dy), 0, 0, fullX, fullY);
-            }
-//            if (key_SPACE) Preview.filter(filter[shaderNum].shader);
-        } 
-        //ImgPreview.copy(Preview, 0, 0, fullX, fullY, 0, 0, fullX, fullY);
-        if ((color_mode_code>5)||(color_mode_code==3)) {
-                Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, fullY*2);
-                if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
-        }
+        if ((color_mode_code>5)||(color_mode_code==3)) outY=fullY*2; else outY=fullY;
+        Interlaced.copy(Img, x, y, (int)(dx), (int)(dy), 0, 0, fullX, outY);
+        if (apply_shader) Interlaced.filter(filter[shaderNum].shader);
         if (color_mode_code>3) convertSC57();
         if (color_mode_code<3) coder();
         else flicker = false;
@@ -697,32 +683,34 @@ void coder() {
         odd = 1; cnt = 0;
         for (int j = 0; j < fullY; j++) {
             for (int i = 0; i < 256; i++) {
-                  offs=j*512+i;
-                  r2 = (ImgPreview.pixels[offs]>>16) & 0xF0;
-                  g2 = (ImgPreview.pixels[offs]>> 8) & 0xF0;
-                  b2 = (ImgPreview.pixels[offs]    ) & 0xE0;
-                  if (color_mode_code==2) Interlaced.pixels[offs] = color(r2, g2, b2);
-                  r1 = (r2<<1) & 32; r2 &= 0xE0; r1 += r2;
-                  g1 = (g2<<1) & 32; g2 &= 0xE0; g1 += g2;
-                  b1 = (b2<<1) & 64; b2 &= 0xC0; b1 += b2;
-                  offs=j*256+i;
+                  offs=(j<<9)+i;
+                  b2 = ImgPreview.pixels[offs];
+                  r2 = (b2>>16) & 0xF0;
+                  g2 = (b2>> 8) & 0xF0;
+                  b2&= 0xE0;
+                  Interlaced.pixels[offs] =(r2<<16)|(g2<<8)|b2;
+                  r1 = (r2<<1) & 32; r2 &= 0xE0; r1 += r2; if (r1>255) r1=0xE0;
+                  g1 = (g2<<1) & 32; g2 &= 0xE0; g1 += g2; if (g1>255) g1=0xE0;
+                  b1 = (b2<<1) & 64; b2 &= 0xC0; b1 += b2; if (b1>255) b1=0xC0;
+                  int c1=(r1<<16)|(g1<<8)|b1;
+                  int c2=(r2<<16)|(g2<<8)|b2;
+                  offs=(j<<8)+i;
                   if (color_mode_code==1) {
-                        P0.pixels[offs] = color(r2,g2,b2);
-                        P1.pixels[offs] = color(r1,g1,b1);
-                        int k=(j*2);
-                        Interlaced.pixels[k*512+i] = color(r2,g2,b2);
-                        Interlaced.pixels[(k+1)*512+i] = color(r1,g1,b1);
+                        P0.pixels[offs] = c2;//color(r2,g2,b2);
+                        P1.pixels[offs] = c1;//color(r1,g1,b1);
+                        int k=(j<<1);
+                        Interlaced.pixels[( k   <<9)+i] = c2;//color(r2,g2,b2);
+                        Interlaced.pixels[((k+1)<<9)+i] = c1;//color(r1,g1,b1);
                   } else {
-                        cnt++;
                         odd^=1;
                         if (odd==0){
-                              P0.pixels[offs] = color(r2,g2,b2);
-                              P1.pixels[offs] = color(r1,g1,b1);
+                              P0.pixels[offs] = c2;//color(r2,g2,b2);
+                              P1.pixels[offs] = c1;//color(r1,g1,b1);
                         } else {
-                              P0.pixels[offs] = color(r1,g1,b1);
-                              P1.pixels[offs] = color(r2,g2,b2);
+                              P0.pixels[offs] = c1;//color(r1,g1,b1);
+                              P1.pixels[offs] = c2;//color(r2,g2,b2);
                         }
-                        if (cnt==256) { odd ^= 1; cnt = 0;}
+                        if (++cnt==256) { odd ^= 1; cnt = 0;}
                   }
             }
         }
@@ -911,6 +899,7 @@ void Render_Info(){
           Screen.blendMode(REPLACE );
           Screen.background(20,25,25);
 
+//          Screen.textFont(font);
           Screen.textSize(15);
           if (color_mode_code==1) color_mode="332 bits (256x212 + 256x424 Screen 8)";
           if (color_mode_code==2) color_mode="443 bits (MSX2 2048 colors)";
@@ -994,6 +983,16 @@ void draw() {
           if (keyPressed) need_redraw = true;
 
           if (need_redraw) {
+
+              if (key_F1) {
+                      GridEnabled   ^= true; 
+                      color_mode_code=4; 
+//                      TilesReady     = false; 
+                      need_redraw = true;
+                      fullX=256;
+                      fullY=212;
+                      key_F1         = false;
+              }
 
               if ((key_F8)&&(color_mode_code<3)) {
                   if (color_mode_code<4) flicker     ^= true;
@@ -1168,13 +1167,19 @@ void draw() {
                           color_mode_code++;
                           if ( color_mode_code> 7) color_mode_code=1;
                       }
-                      if ( color_mode_code< 3) coder_mode=color_mode_code-1;
-                      if ((color_mode_code==5)||(color_mode_code==7)) fullX=512;
-                      if ((color_mode_code==1)||(color_mode_code==5)||(color_mode_code==6)||(color_mode_code==7)) fullY=212;
-                      key_F7       = false;
                       println();
                       println("Mode : "+color_mode_code);
-                      println("Screen: "+fullX+" x "+fullY);
+                      if ((color_mode_code==1)||(color_mode_code==5)||(color_mode_code==6)||(color_mode_code==7)) fullY=212;
+                      outY=fullY;
+                      if ( color_mode_code< 3) coder_mode=color_mode_code-1;
+                      if ((color_mode_code==5)||(color_mode_code==7)) {
+                            fullX=512;
+                            if (dx<512.0) dx=512.0;
+                            if ((x+dx)>Img.width) x=(int)(Img.width-dx);
+                      }
+                      if (color_mode_code>5) outY<<=1; 
+                      println("Screen: "+fullX+" x "+outY);
+                      key_F7       = false;
                   }
       
                   if (apply_shader==true) {
@@ -1183,17 +1188,19 @@ void draw() {
                           max=filter[shaderNum].val_max;
                           if ((filter[shaderNum].val+val)<max) filter[shaderNum].val+=val;
                           if ((max-filter[shaderNum].val)<val) filter[shaderNum].val=max;
+                          filter[shaderNum].shader.set("val",filter[shaderNum].val);
                       }
                       if ((key_RMINUS)&&(!key_CTRL)) {
                           min=filter[shaderNum].val_min;
                           if ((filter[shaderNum].val-val)>min) filter[shaderNum].val-=val;
                           if ((filter[shaderNum].val-val)<min) filter[shaderNum].val=min;
+                          filter[shaderNum].shader.set("val",filter[shaderNum].val);
                       }
                       if ((key_RMULT)&&(!key_CTRL)) {
                           filter[shaderNum].val=filter[shaderNum].reset_val;
+                          filter[shaderNum].shader.set("val",filter[shaderNum].val);
                           key_RMULT = false;
                       }
-                      filter[shaderNum].shader.set("val",filter[shaderNum].val);
                   }
 
                   if (key_F9 ){
@@ -1261,18 +1268,12 @@ void draw() {
               }
               if (key_SHIFT) apply_Basic_header=false; else apply_Basic_header=true;
               
-              if (key_F1) {
-                      color_mode_code=4; 
-                      GridEnabled   ^= true; 
-//                      TilesReady     = false; 
-                      fullX=256;
-                      key_F1         = false;
-              }
               if (key_TAB) {
                   if (key_SHIFT) {
                     if (customPAL_num>0) allow_sorting_PAL^=true;
                   } else
                       if (color_mode_code>3) {    // Switch Palette
+                          need_redraw = true;
                           if (!CustomPal) CustomPal^=true;
                           else {
                               customPAL_num++;
