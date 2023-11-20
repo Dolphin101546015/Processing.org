@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
-//  MSX2 Images Converter v3.90 (by Dolphin_Soft #101546015)                                                                      //
+//  MSX2 Images Converter v3.80 (by Dolphin_Soft #101546015)                                                                      //
 //                                                                                                                                //
 //            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               //
 //                                                                                                                                //
@@ -67,10 +67,9 @@
 //                                                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-String      ImgOut="Z:\\basic\\img";
 String      SourceImage="yenn.png";
-//String      SourceImage="sp16_colored_new2.png";
-
+String      ImgName="img";
+String      ImgOut="Z:\\basic\\"+ImgName;
 
 //                          Custom Palette (16 colors 0xRRGGBB)
 static int customPAL[][]={
@@ -281,7 +280,7 @@ void convertSC57(){
 void save_SC57() {
         int tcol=0;
         int t=0, i=0, y_step=1;
-        String code = "10 SCREEN 5;20 BLOAD"+(char)34+"img.s50"+(char)34+",s;40";
+        String code = "10 SCREEN 5;20 BLOAD"+(char)34+ImgName+".s50"+(char)34+",s;40";
         String OutFile;
 
 // Save to SC5-7
@@ -379,13 +378,13 @@ void save_SC57() {
         }
         if (apply_Basic_header){
             if (color_mode_code==5)
-                code = "10 SCREEN 7;20 BLOAD"+(char)34+"img.s70"+(char)34+",s;40";
+                code = "10 SCREEN 7;20 BLOAD"+(char)34+ImgName+".s70"+(char)34+",s;40";
             if (color_mode_code==6)
-                code = "10 SCREEN 5,,,,,3;20 BLOAD"+(char)34+"img.s50"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s51"+(char)34+",s;40";
+                code = "10 SCREEN 5,,,,,3;20 BLOAD"+(char)34+ImgName+".s50"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+ImgName+".s51"+(char)34+",s;40";
             if (color_mode_code==7)
-                code = "10 SCREEN 7,,,,,3;20 BLOAD"+(char)34+"img.s70"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s71"+(char)34+",s;40 ";
+                code = "10 SCREEN 7,,,,,3;20 BLOAD"+(char)34+ImgName+".s70"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+ImgName+".s71"+(char)34+",s;40 ";
             if ((CustomPal)&&(customPAL_num==0)) code+="'"; 
-            code+="COLOR=RESTORE;50 IFNOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34+";";
+            code+="COLOR=RESTORE;50 IFNOTSTRIG(0)GOTO50;60 RUN"+(char)34+ImgName+".bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
         }
@@ -547,8 +546,8 @@ void SaveSprites(){
                   println("Message: " + e);
             }
             if (apply_Basic_header){
-                code ="10 SCREEN 7,2,,,,0;20 BLOAD"+(char)34+"img.pal"+(char)34+",S:COLOR=RESTORE;30 BLOAD"+(char)34+"img.spt"+(char)34+",S,&H0;";
-                code+="40 BLOAD"+(char)34+"img.sct"+(char)34+",S,&H4200-512;50 _TURBO ON;60 SET PAGE0,1:CLS:SET PAGE0,0;70 Z=VDP(9):SP=0:VDP(2)=31:LINE(0,0)-(511,127),15,BF,XOR;";
+                code ="10 SCREEN 7,2,,,,0;20 BLOAD"+(char)34+ImgName+".pal"+(char)34+",S:COLOR=RESTORE;30 BLOAD"+(char)34+ImgName+".spt"+(char)34+",S,&H0;";
+                code+="40 BLOAD"+(char)34+ImgName+".sct"+(char)34+",S,&H4200-512;50 _TURBO ON;60 SET PAGE0,1:CLS:SET PAGE0,0;70 Z=VDP(9):SP=0:VDP(2)=31:LINE(0,0)-(511,127),15,BF,XOR;";
                 code+="80 G=SP"+(char)92+"2:VDP(6)=G:VDP(5)=((SP+16)*8)OR7:VDP(12)=0;81 LINE(0,SP*4+64)-(511,SP*4+3+64),15,BF,XOR;82 LINE(0,G*8)-(511,G*8+7),15,BF,XOR;90 VDP(9)=Z:S=1:AD=((SP*8)OR132)*&H80;";
                 code+="91 POKE&HC200,255:IFPEEK(&HFBEC)=251GOTO150;92 IF STRIG(0) GOTO 140;";
                 code+="95 S=STICK(0):IF (S<>1) AND (S<>5) GOTO91;96 VDP(9)=ZOR2:LINE(0,SP*4+64)-(511,SP*4+3+64),15,BF,XOR;97 LINE(0,G*8)-(511,G*8+7),15,BF,XOR;";
@@ -714,10 +713,10 @@ void SaveTiles(){
             }
             if (apply_Basic_header){
                 code = "10 SCREEN4:VDP(10)=VDP(10)OR128:VDP(2)=7:VDP(9)=VDP(9)OR2;";
-                code+="20 BLOAD"+(char)34+"img.s4p"+(char)34+",S:BLOAD"+(char)34+"img.s4n"+(char)34+",S,&H4000;";
-                code+="30 BLOAD"+(char)34+"img.pal"+(char)34+",S:";
+                code+="20 BLOAD"+(char)34+ImgName+".s4p"+(char)34+",S:BLOAD"+(char)34+ImgName+".s4n"+(char)34+",S,&H4000;";
+                code+="30 BLOAD"+(char)34+ImgName+".pal"+(char)34+",S:";
                 if ((CustomPal)&&(customPAL_num==0)) code+="'"; 
-                code+="COLOR=RESTORE;40 BLOAD"+(char)34+"img.s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;60 RUN"+(char)34+"img.bas"+(char)34;
+                code+="COLOR=RESTORE;40 BLOAD"+(char)34+ImgName+".s4c"+(char)34+",S,&H2000;50 IF NOTSTRIG(0)GOTO50;60 RUN"+(char)34+ImgName+".bas"+(char)34;
                 String[] list = split(code, ';');
                 saveStrings(ImgOut+".bas",list);
             }
@@ -1020,7 +1019,7 @@ void Save_MSX(){
             String code = "10 SCREEN 8,,,,,";
             if (color_mode_code==1) code+="3";
             else  code+="2";
-            code+=";20 BLOAD"+(char)34+"img.s80"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+"img.s81"+(char)34+",s;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+"img.bas"+(char)34+";";
+            code+=";20 BLOAD"+(char)34+ImgName+".s80"+(char)34+",s:SET PAGE1,1;30 BLOAD"+(char)34+ImgName+".s81"+(char)34+",s;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+ImgName+".bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
           }
@@ -1201,14 +1200,14 @@ void SaveYJK(){
             String code = "10 SCREEN ";
             if (yjk_mode==240) code+="11";
             else code+="12";
-            code+=",,,,,2;20 BLOAD"+(char)34+"img.s";
+            code+=",,,,,2;20 BLOAD"+(char)34+ImgName+".s";
             if (yjk_mode==240) code+="B";
             else code+="C";
             code+="0"+(char)34+",s:SET PAGE1,1:CLS;";
-            code+="30 BLOAD"+(char)34+"img.s";
+            code+="30 BLOAD"+(char)34+ImgName+".s";
             if (yjk_mode==240) code+="B";
             else code+="C";
-            code+="1"+(char)34+",s;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+"img.bas"+(char)34+";";
+            code+="1"+(char)34+",s;40 IFNOTSTRIG(0)GOTO40;50 RUN"+(char)34+ImgName+".bas"+(char)34+";";
             String[] list = split(code, ';');
             saveStrings(ImgOut+".bas",list);
           }
