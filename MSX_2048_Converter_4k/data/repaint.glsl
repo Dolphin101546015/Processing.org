@@ -27,8 +27,8 @@ void main(void) {
 	
    float minL=0;
    float tmc=0;
-   int nm=0;
-        
+   int   nm=0;
+/*        
 	for(int i=0;i<16;i++) {
 		sorted[i]=inPAL[i]&0xE0E0E0;
 	}
@@ -39,19 +39,26 @@ void main(void) {
 			sorted[t]=sorted[i];
 			sorted[i]=tmp;
 		}
-
-   vec3 dest = texture2D( texture, vertTexCoord.st).rgb;
-   vec3 srt;
+*/
+	vec3 src = texture2D( texture, vertTexCoord.st).rgb;
+	vec3 dest;
 	minL=9999.0;
 	for(int i=0;i<16;i++){
-		srt = vec3((sorted[i]>>16) & 0xE0, (sorted[i]>>8) & 0xE0, sorted[i] & 0xE0) / 255.0;
-		srt = sqrt(abs(dest * dest - srt * srt));
-		tmc = srt.r + srt.g + srt.b;
-		if (tmc<minL) { minL=tmc; nm=i; }
+		dest = vec3((inPAL[i]>>16) & 0xE0, (inPAL[i]>>8) & 0xE0, inPAL[i] & 0xE0) / 240.0;
+		dest-=src;
+		dest = (dest * dest);
+//		dest.r*=3.0;
+//		dest.g*=2.0;
+		//tmc = dest.r + dest.g + dest.b;
+		tmc=length(dest);
+		if (tmc<minL) { 
+			minL=tmc; 
+			nm=i; 
+		}
 	}
-	tR=(sorted[nm] >>16) & 0xE0;
-	tG=(sorted[nm] >> 8) & 0xE0;
-	tB=(sorted[nm]     ) & 0xE0;
+	tR=(inPAL[nm] >>16) & 0xE0;
+	tG=(inPAL[nm] >> 8) & 0xE0;
+	tB=(inPAL[nm]     ) & 0xE0;
 	dest=vec3(tR, tG, tB);
-  gl_FragColor = vec4(dest/255.0,1.0);
+	gl_FragColor = vec4(dest/255.0,1.0);
 }
