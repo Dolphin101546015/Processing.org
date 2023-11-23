@@ -1,5 +1,5 @@
 //
-//  MSX2 Images Converter v3.90 (by Dolphin_Soft #101546015)
+//  MSX2 Images Converter v3.92 (by Dolphin_Soft #101546015)
 //                                                           
 //  (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)
 //                                                         

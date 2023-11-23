@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                                                //
-//  MSX2 Images Converter v3.80 (by Dolphin_Soft #101546015)                                                                      //
+//  MSX2 Images Converter v3.92 (by Dolphin_Soft #101546015)                                                                      //
 //                                                                                                                                //
 //            (for converting images to MSX Basic images file format, or as plain data (with palette for 16c modes)               //
 //                                                                                                                                //
@@ -62,7 +62,7 @@
 //  (1) - 256 colors mode have coding output for Interlace, 2048 colors mode switch every output pixels between frames.           //
 //  (2) - One Shader Filter from: Sharpen, Contrast, Gamma, Solaris, Saturat, Temper, Emboss, Dithering, Denoise, Noise,          //
 // For applying several filters, use every you needed sequentially by pressing [SHIFT]+([F9] or [F11]) on every sellected filter. //
-//  (3) - Saving in 16M mode, generate YJK files with extended ranges (more than 19k colors), for MSX2+ SCREEN12                  //
+//  (3) - Saving in 16M mode, generate YJK files with extended ranges (more than 12k or 19k colors), for MSX2+ SCREEN11 (or 12)   //
 //        All active shaders working also.                                                                                        //
 //                                                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,10 +81,10 @@ static int customPAL[][]={
                            0xE08000,0x0000E0,0xE00000,0xE000E0,0x00E000,0x00E0E0,0xE0E000,0xE0E0E0},   //  MSX Screen 8 Palette (Fixed Sprite colors)
                           {0x000000,0x0000A0,0xA00000,0xA000A0,0x00A000,0x00A0A0,0xA0A000,0xA0A0A0,
                            0x000000,0x0000E0,0xE00000,0xE000E0,0x00E000,0x00E0E0,0xE0E000,0xE0E0E0},   //  ZX Spectrum Palette
-                          {0x000000,0x202020,0x404040,0x606060,0x808080,0xA0A0A0,0xC0C0C0,0xE0E0E0,    
-                           0xE00000,0x800000,0x00E000,0x008000,0x0000E0,0x000080,0xA000A0,0x00A0A0},   //  Custom User Palette 0
-                          {0x000000,0x202020,0x404040,0x606060,0x808080,0xA0A0A0,0xC0C0C0,0xE0E0E0,    
-                           0xE00000,0x800000,0x00E000,0x008000,0x0000E0,0x000080,0xA000A0,0x00A0A0},   //  Custom User Palette 1
+                          {0x002020,0x402000,0xE000E0,0xE000A0,0x000000,0x006000,0x40C0E0,0xE02020,    
+                           0xE08080,0x4060E0,0x00C000,0xE0A000,0xE0C080,0x606060,0xA0A0A0,0xE0E0E0},   //  Custom User Palette 0
+                          {0x000000,0x002020,0x008000,0x20E020,0x0000C0,0x2080E0,0x800000,0x60E0E0,    
+                           0xE02020,0xE06040,0xE0A000,0xE0E000,0x006000,0x606060,0xA0A0A0,0xE0E0E0},   //  Custom User Palette 1
                           {0x000000,0x202020,0x404040,0x606060,0x808080,0xA0A0A0,0xC0C0C0,0xE0E0E0,    
                            0xE00000,0x800000,0x00E000,0x008000,0x0000E0,0x000080,0xA000A0,0x00A0A0},   //  Custom User Palette 2
                           {0x000000,0x000000,0x000000,0x000000,0x000000,0x000000,0x000000,0x000000,    
@@ -974,7 +974,8 @@ void Save_MSX(){
               if (apply_Basic_header){
                     outp.write(0xFE); 
                     outp.write(0x00); outp.write(0x00); 
-                    outp.write(0x00); outp.write(0xD4); 
+                    if (fullY==256) { outp.write(0xFE); outp.write(0xFF); }
+                    else  { outp.write(0x00); outp.write(0xD4); }
                     outp.write(0x00); outp.write(0x00);
               }
               P0.loadPixels();
@@ -998,7 +999,8 @@ void Save_MSX(){
               if (apply_Basic_header){
                   outp.write(0xFE); 
                   outp.write(0x00); outp.write(0x00); 
-                  outp.write(0x00); outp.write(0xD4); 
+                  if (fullY==256) { outp.write(0xFE); outp.write(0xFF); }
+                  else  { outp.write(0x00); outp.write(0xD4); }
                   outp.write(0x00); outp.write(0x00);
               }
               P1.loadPixels();
@@ -1068,18 +1070,18 @@ void RGB2YJK(int offs){
         r1+=r2+r3+r4; r1>>=2;
         g1+=g2+g3+g4; g1>>=2;
         b1+=b2+b3+b4; b1>>=2;
-//        b1+=b4; b1>>=1;
         yt=(y1+y2+y3+y4)>>2;
 
         if ((ok==255)&&(oj==255)) {ok=g1-yt; oj=r1-yt;}
-        j = (int)((r1-yt+oj)/2); k = (g1-yt+ok)/2;
-        //if ((ok-k)<-2) { j=123; k-=(ok-k)/1; y1+=(ok-k)/6; y2+=(ok-k)/9; y3-=(ok-k)/9; y4-=(ok-k)/6;}
+        j = (r1-yt+oj)>>1; k = (g1-yt+ok)>>1;
         if ((oj-j)<-0) { j+=(oj-j)/3; y1+=(oj-j)/6; y2+=(oj-j)/9; y3-=(oj-j)/9; y4-=(oj-j)/6;}
         else
-        if ((oj-j)>0) { j-=4; y1+=(oj-j)/6; y2+=(oj-j)/9; y3+=(oj-j)/8; y4+=(oj-j)/6;}
-        oj=j;
-        ok=k;
-
+            { j-=4; y1+=(oj-j)/6; y2+=(oj-j)/9; y3+=(oj-j)/8; y4+=(oj-j)/6;}
+        oj=j; ok=k;
+        if (y1<0) y1=0;
+        if (y2<0) y2=0;
+        if (y3<0) y3=0;
+        if (y4<0) y4=0;
         y1&=yjk_mode; y2&=yjk_mode; y3&=yjk_mode; y4&=yjk_mode;
         Interlaced.pixels[offs]  = YJK2RGB(y1,j,k);
         Interlaced.pixels[offs+1]= YJK2RGB(y2,j,k);
@@ -1090,7 +1092,7 @@ void RGB2YJK(int offs){
 void CodeYJK(){
         Interlaced.beginDraw();
         Interlaced.loadPixels();
-        for (int m=0; m<fullY*2-1;m++){
+        for (int m=0; m<fullY*2;m++){
           oj=255;
           ok=255;
 
@@ -1221,8 +1223,8 @@ void Render_Info(){
 
 //          Screen.textFont(font);
           Screen.textSize(15);
-          if (color_mode_code==1) color_mode="332 bits (256x212 + 256x424 Screen 8)";
-          if (color_mode_code==2) color_mode="443 bits (MSX2 2048 colors)";
+          if (color_mode_code==1) color_mode="332 bits (256x"+fullY+" + Interlaced MSX2 Screen 8)";
+          if (color_mode_code==2) color_mode="443 bits (256x"+fullY+" + Flicked MSX2 2048 colors)";
           if (color_mode_code==3)
               if (yjk_mode==248) color_mode="YJK MSX2+ (19268 colors)";
               else color_mode="YJK MSX2+ (12499 colors)";
@@ -1336,7 +1338,11 @@ void draw() {
                   if ((key_F4)&&(!SpritesEnabled)) {
                       if (fullY==256) { fullY=212; }
                       else  { fullY=256; }
-                      if ((color_mode_code==1)||(color_mode_code>4)) { fullY=212; }
+                      if (color_mode_code>4) { fullY=212; }
+                      outY=fullY;
+                      println();
+                      println("Mode : "+color_mode_code);
+                      println("Screen: "+fullX+" x "+outY);
                       key_F4      = false;
                   }
     
@@ -1504,7 +1510,7 @@ void draw() {
                       }
                       println();
                       println("Mode : "+color_mode_code);
-                      if ((color_mode_code==1)||(color_mode_code==5)||(color_mode_code==6)||(color_mode_code==7)) fullY=212;
+                      if (color_mode_code>4) fullY=212;
                       outY=fullY;
                       if ( color_mode_code< 3) coder_mode=color_mode_code-1;
                       if ((color_mode_code==5)||(color_mode_code==7)) {
